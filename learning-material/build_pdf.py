@@ -8,8 +8,8 @@ import argparse
 import html
 import json
 import re
-import textwrap
 import math
+from sync_reading_code import sync as sync_reading_code
 
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
@@ -72,8 +72,8 @@ styles = {
                                spaceBefore=16, spaceAfter=16, borderPadding=8, keepWithNext=True,
                                borderWidth=0.5, borderColor=colors.HexColor('#b0b0b0'),
                                backColor=colors.HexColor('#f4f4f4'), allowWidows=0, allowOrphans=0),
-    'code': ParagraphStyle('Code', fontName=MONO, fontSize=8.0, leading=11.5,
-                           spaceBefore=6, spaceAfter=10, leftIndent=5),
+    'code': ParagraphStyle('Code', fontName=MONO, fontSize=9, leading=12,
+                           spaceBefore=9, spaceAfter=12, leftIndent=7),
     'cell': ParagraphStyle('Cell', fontName='Book', fontSize=8.2, leading=11.2),
     'caption': ParagraphStyle('Caption', fontName='Book-Italic', fontSize=8.5, leading=11.5,
                               spaceBefore=7, spaceAfter=14),
@@ -90,10 +90,16 @@ class BookFigure(Flowable):
         super().__init__()
         self.spec = FIGURES[key]
         self.width = WIDTH
-        self.height = self.spec['height']
+        self.height = self.spec['height'] + 35
 
     def draw(self):
         c = self.canv
+        c.setFillColor(colors.HexColor('#182b42'))
+        c.roundRect(0,self.spec['height']+10,WIDTH,25,5,fill=1,stroke=0)
+        c.setFillColor(colors.white)
+        c.setFont('Book-Bold',8.5)
+        assert pdfmetrics.stringWidth(self.spec['title'],'Book-Bold',8.5) < WIDTH-14
+        c.drawString(7,self.spec['height']+18,self.spec['title'])
         nodes = {n['id']: n for n in self.spec['nodes']}
         c.setStrokeColor(colors.HexColor('#555555'))
         c.setFillColor(colors.HexColor('#555555'))
@@ -115,14 +121,14 @@ class BookFigure(Flowable):
             for offset in [-.45,.45]:
                 c.line(x2,y2,x2-5*math.cos(angle+offset),y2-5*math.sin(angle+offset))
         for n in nodes.values():
-            c.setFillColor(colors.HexColor('#e5e5e5') if n.get('shade') else colors.white)
-            c.rect(n['x'],n['y'],n['w'],n['h'],fill=1,stroke=1)
+            c.setFillColor(colors.HexColor('#dde5ed') if n.get('shade') else colors.HexColor('#f8f9fb'))
+            c.roundRect(n['x'],n['y'],n['w'],n['h'],5,fill=1,stroke=1)
             c.setFillColor(INK)
-            c.setFont('Book',8.2)
+            c.setFont('Book',9)
             lines = n['text'].split('\n')
             for i,line in enumerate(lines):
-                assert pdfmetrics.stringWidth(line,'Book',8.2) <= n['w']-6, line
-                c.drawCentredString(n['x']+n['w']/2,n['y']+n['h']/2+(len(lines)-1)*5.4-i*10.8-2.8,line)
+                assert pdfmetrics.stringWidth(line,'Book',9) <= n['w']-8, line
+                c.drawCentredString(n['x']+n['w']/2,n['y']+n['h']/2+(len(lines)-1)*6-i*12-3,line)
         c.setFont('Book',8)
         for x,y,label in self.spec['labels']:
             assert x+pdfmetrics.stringWidth(label,'Book',8) <= WIDTH, label
@@ -145,7 +151,9 @@ class SvgCanvas:
     def setStrokeColor(self, value): self.stroke = value.hexval().replace('0x','#')
     def setFillColor(self, value): self.fill = value.hexval().replace('0x','#')
     def setLineWidth(self, value): self.line_width = value
-    def setFont(self, name, size): self.font_size = size
+    def setFont(self, name, size):
+        self.font_size = size
+        self.font_weight = 'bold' if 'Bold' in name else 'normal'
 
     def line(self, x1,y1,x2,y2):
         self.parts.append(f'<line x1="{x1}" y1="{self.height-y1}" x2="{x2}" y2="{self.height-y2}" stroke="{self.stroke}" stroke-width="{self.line_width}"/>')
@@ -153,10 +161,13 @@ class SvgCanvas:
     def rect(self,x,y,w,h,fill=0,stroke=1):
         self.parts.append(f'<rect x="{x}" y="{self.height-y-h}" width="{w}" height="{h}" fill="{self.fill if fill else "none"}" stroke="{self.stroke if stroke else "none"}" stroke-width="{self.line_width}"/>')
 
+    def roundRect(self,x,y,w,h,r,fill=0,stroke=1):
+        self.parts.append(f'<rect x="{x}" y="{self.height-y-h}" width="{w}" height="{h}" rx="{r}" fill="{self.fill if fill else "none"}" stroke="{self.stroke if stroke else "none"}" stroke-width="{self.line_width}"/>')
+
     def drawString(self,x,y,text): self._text(x,y,text,'start')
     def drawCentredString(self,x,y,text): self._text(x,y,text,'middle')
     def _text(self,x,y,text,anchor):
-        self.parts.append(f'<text x="{x}" y="{self.height-y}" text-anchor="{anchor}" fill="{self.fill}" font-family="Georgia, serif" font-size="{self.font_size}">{html.escape(text)}</text>')
+        self.parts.append(f'<text x="{x}" y="{self.height-y}" text-anchor="{anchor}" fill="{self.fill}" font-family="Georgia, serif" font-weight="{self.font_weight}" font-size="{self.font_size}">{html.escape(text)}</text>')
 
 
 def export_svg_figures():
@@ -241,10 +252,20 @@ def markdown_flowables(text, chapter_number):
             i += 1
             while i < len(lines) and not lines[i].startswith('```'):
                 # Keep readable line lengths on a six-inch book page.
-                code.extend(textwrap.wrap(normalize(lines[i]), width=68,
-                                          replace_whitespace=False, drop_whitespace=False) or [''])
+                code_line = normalize(lines[i]).expandtabs(4)
+                assert pdfmetrics.stringWidth(code_line,MONO,9) <= WIDTH-14, code_line
+                code.append(code_line)
                 i += 1
-            out.append(KeepTogether([Preformatted('\n'.join(code), styles['code'])]))
+            block = LongTable([[Preformatted('\n'.join(code), styles['code'])]], colWidths=[WIDTH])
+            block.setStyle(TableStyle([
+                ('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#f3f5f7')),
+                ('LINEBEFORE',(0,0),(0,-1),2,colors.HexColor('#182b42')),
+                ('LEFTPADDING',(0,0),(-1,-1),7),
+                ('RIGHTPADDING',(0,0),(-1,-1),7),
+                ('TOPPADDING',(0,0),(-1,-1),9),
+                ('BOTTOMPADDING',(0,0),(-1,-1),9),
+            ]))
+            out.append(KeepTogether([block,Spacer(1,12)]))
             i += 1
             continue
         if line.startswith('|'):
@@ -300,6 +321,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=REPO/'output'/'pdf'/'netflix-go-interview-book.pdf')
     args = parser.parse_args()
+    sync_reading_code()
     export_svg_figures()
     index = json.loads((ROOT/'reading-index.json').read_text(encoding='utf-8'))
     files = [ROOT/'BOOK-INTRO.md'] + [ROOT/item['path'] for item in index] + [ROOT/'SOURCES.md']
@@ -348,7 +370,8 @@ def main():
         assert f'Chapter {n}' in extracted, f'Missing chapter {n}'
     words = len(re.findall(r'\b[\w]+(?:[\x27-][\w]+)*\b',whole))
     report = {'edition':'reading','chapters':12,'worked_examples':whole.count('## Worked example:'),
-              'vector_figures':len(FIGURES),'conversation_questions_in_separate_sessions':132,
+              'vector_figures':len(FIGURES),'go_example_sections':whole.count('## Go example:'),
+              'conversation_questions_in_separate_sessions':132,
               'worked_program_designs':11,'complete_case_studies':2,
               'source_words_approx':words,'pdf_pages':len(reader.pages),'pdf_bytes':args.output.stat().st_size,
               'source_files':[str(p.relative_to(REPO)).replace('\\','/') for p in files]}

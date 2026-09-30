@@ -99,3 +99,38 @@ Cleanup reads now once for its cutoff. While the heap root is due, pop it. Look 
 Write A at zero with deadline ten. At five, overwrite it with deadline thirty and a new generation. Cleanup at ten pops the old record but leaves the map unchanged. Cleanup at thirty removes the new entry. Deleting and recreating A between those calls is safe only if recreation does not reuse the old generation.
 
 Put costs logarithmic time in heap size; Get is expected constant time; Cleanup costs according to the number of records popped. Heap size includes stale records, so repeated overwrites can grow memory. An indexed heap or periodic rebuilding addresses that extension. Adding a single mutex around public operations protects state, provided the injected clock is safe and does not reenter this cache.
+
+## Go example: validate a due record against current identity
+
+This helper applies one expiry record after a deadline heap yields it. For this standalone TTL map, deadline is in integer ticks and generations are fresh for every write, including delete-and-reinsert. Map access is owned by one goroutine or one external lock. A combined LRU cache must call its central removal helper instead of only deleting from the map.
+
+```go
+type TimedValue struct {
+    Value string
+    Deadline int64
+    Generation uint64
+}
+
+type Expiry struct {
+    Key string
+    Deadline int64
+    Generation uint64
+}
+
+func ApplyExpiry(current map[string]TimedValue,
+    record Expiry, now int64) bool {
+    if record.Deadline > now {
+        return false
+    }
+    entry, found := current[record.Key]
+    if !found || entry.Generation != record.Generation {
+        return false
+    }
+    delete(current, record.Key)
+    return true
+}
+```
+
+If the popped record is A generation one while the map holds generation two, the comparison prevents deletion. A missing key also returns false. At exactly the deadline, a matching generation is removed. The boolean reports an actual resident removal, not merely processing a heap record.
+
+The helper relies on the invariant that a matching generation identifies a write whose stored deadline equals the record's deadline. Get must still check visibility at read time; a cleanup helper alone cannot promise that a value is fresh when cleanup has not run. Each helper call has expected constant map work; the surrounding heap pop costs logarithmic time in heap records, including stale ones.

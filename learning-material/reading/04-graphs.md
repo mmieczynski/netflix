@@ -56,7 +56,7 @@ Do not confuse shared descendants with cycles. If A leads to B and C, and both l
 
 Consider edges A to B, A to C, B to D, and C to D. Starting at A, find the minimum number of edges to D. Breadth-first search processes the frontier in layers. The queue is not just storage for pending work; its order represents increasing distance from the start.
 
-![A diamond-shaped graph. B and C both discover D, but only the first discovery enqueues it.](figures/graph.svg)
+![Every edge costs one hop. B and C both have edges to D, but only the first discovery enqueues D.](figures/graph.svg)
 
 | Removed from queue | Newly discovered | Queue afterward |
 | --- | --- | --- |
@@ -90,3 +90,30 @@ Use a head index to consume that queue. Each removed job becomes the next output
 For A before C and B before C, initial counts are zero for A and B and two for C. Finishing A drops C to one. Finishing B drops C to zero and makes it ready. A, B, C is valid, as is B, A, C. Add an isolated D and it must still appear somewhere. Add C before A and a dependency cycle now blocks at least A and C.
 
 Validation, graph construction, readiness processing, and final completeness checking are useful conceptual stages. Their combined work is linear in vertices plus edges. If the smallest available job must always be chosen, replace the ready queue with a min heap, accepting logarithmic ready-set operations. This changes tie policy rather than dependency meaning.
+
+## Go example: record discovery when enqueuing
+
+This complete BFS returns minimum hop counts from a start vertex. Missing adjacency entries mean no outgoing edges. Vertex IDs are strings, and edges have equal cost. The slice is a queue with a head index, avoiding removal from its front.
+
+```go
+func HopDistances(edges map[string][]string,
+    start string) map[string]int {
+    distance := map[string]int{start: 0}
+    queue := []string{start}
+    for head := 0; head < len(queue); head++ {
+        from := queue[head]
+        for _, to := range edges[from] {
+            if _, seen := distance[to]; seen {
+                continue
+            }
+            distance[to] = distance[from] + 1
+            queue = append(queue, to)
+        }
+    }
+    return distance
+}
+```
+
+In the diamond graph, B records D's distance as two before C is processed. C then sees D already in the map and does not enqueue it again. The map doubles as the visited set and the result, so there is no second membership structure to keep synchronized. A cycle back to A also stops because A was registered at initialization.
+
+An unreachable vertex is absent from the result; distance zero belongs to the start and does not mean unreachable. The caller must use the same comma-ok lookup introduced in chapter one. Work is linear in reachable vertices and their outgoing edges. The head-index queue retains its backing array until this traversal finishes; its maximum retained storage is linear in discovered vertices.

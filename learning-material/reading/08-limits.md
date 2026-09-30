@@ -93,3 +93,34 @@ With limit two and window ten, Allow at zero and one returns true; at nine false
 For a token bucket, the fields are capacity, refill rate, current tokens, and last-accounted time. Allow first brings tokens up to now: add elapsed time times rate, capped at capacity, and update the accounted time. If tokens are below one, return false. Otherwise subtract one and return true. Protect that full sequence atomically. Define the clock policy and whether fractional tokens are represented by floating point or exact integer units.
 
 A capacity-three bucket starts with three immediate acceptances and then rejects. After one second at one token per second it accepts one more. Long idle time returns it only to capacity. These tests validate a different guarantee from the exact rolling log. The two structs share an admission API but should not be presented as interchangeable implementations of the same rule.
+
+## Go example: expire, count, then admit
+
+This complete single-user limiter uses nondecreasing integer-second timestamps, a positive window, and a nonnegative limit. Timestamps and subtraction must fit int64. Construction supplies those fields; callers are serialized. The method counts accepted requests only.
+
+```go
+type WindowLimiter struct {
+    Window int64
+    Limit int
+    accepted []int64
+}
+
+func (l *WindowLimiter) Allow(now int64) bool {
+    cutoff := now - l.Window
+    expired := 0
+    for expired < len(l.accepted) &&
+        l.accepted[expired] <= cutoff {
+        expired++
+    }
+    l.accepted = l.accepted[expired:]
+    if len(l.accepted) >= l.Limit {
+        return false
+    }
+    l.accepted = append(l.accepted, now)
+    return true
+}
+```
+
+For Window ten and Limit three, requests 0, 4, 9, 10, 10 produce true, true, true, true, false. At time ten, timestamp zero is removed before capacity is checked. A rejected request is not appended, so retries do not silently change the policy. Limit zero denies every request.
+
+Each accepted timestamp is appended once and discarded once, yielding amortized constant queue work per request. A single request may expire many timestamps. Reslicing retains the backing array; bounded queue length does not mean immediate release of its old allocation. A ring buffer or periodic compaction gives more explicit reuse. Supporting many users adds a map of limiter states and a separate idle-user cleanup policy; it does not change this per-user admission rule.

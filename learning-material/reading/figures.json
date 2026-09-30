@@ -1,42 +1,47 @@
 {
   "representations": {
-    "height": 180,
+    "title": "ONE INPUT, THREE INFORMATION BUDGETS",
+    "height": 214,
     "nodes": [
       {
         "id": "input",
-        "x": 65,
-        "y": 130,
-        "w": 224,
-        "h": 38,
-        "text": "Events: A:4, B:7, A:2",
-        "shade": false
+        "x": 55,
+        "y": 145,
+        "w": 244,
+        "h": 50,
+        "text": "Input events\nA:4, B:7, A:2",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "set",
-        "x": 4,
-        "y": 35,
-        "w": 105,
-        "h": 48,
-        "text": "Membership\nA, B",
-        "shade": false
+        "x": 3,
+        "y": 50,
+        "w": 110,
+        "h": 44,
+        "text": "Set\nA, B",
+        "shade": false,
+        "kind": "card"
       },
       {
-        "id": "sum",
-        "x": 125,
-        "y": 35,
-        "w": 105,
-        "h": 48,
+        "id": "total",
+        "x": 122,
+        "y": 50,
+        "w": 110,
+        "h": 44,
         "text": "Totals\nA:6, B:7",
-        "shade": false
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "history",
-        "x": 245,
-        "y": 35,
-        "w": 105,
-        "h": 48,
+        "x": 241,
+        "y": 50,
+        "w": 110,
+        "h": 44,
         "text": "History\nA:4, B:7, A:2",
-        "shade": false
+        "shade": false,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -46,234 +51,307 @@
       ],
       [
         "input",
-        "sum"
+        "total"
       ],
       [
         "input",
         "history"
       ]
     ],
-    "labels": []
+    "labels": [
+      [
+        9,
+        27,
+        "Keeps membership"
+      ],
+      [
+        130,
+        27,
+        "Keeps sums"
+      ],
+      [
+        246,
+        27,
+        "Keeps sequence"
+      ],
+      [
+        4,
+        5,
+        "Each arrow transforms the input; lost detail cannot be recovered."
+      ]
+    ]
   },
   "window": {
-    "height": 181,
+    "title": "WINDOW REPAIR: THE LEFT EDGE ONLY ADVANCES",
+    "height": 218,
     "nodes": [
       {
         "id": "0-0",
-        "x": 106,
-        "y": 132,
-        "w": 44,
-        "h": 30,
+        "x": 137,
+        "y": 156,
+        "w": 42,
+        "h": 33,
         "text": "A",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "0-1",
-        "x": 163,
-        "y": 132,
-        "w": 44,
-        "h": 30,
+        "x": 189,
+        "y": 156,
+        "w": 42,
+        "h": 33,
         "text": "B",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "0-2",
-        "x": 220,
-        "y": 132,
-        "w": 44,
-        "h": 30,
+        "x": 241,
+        "y": 156,
+        "w": 42,
+        "h": 33,
         "text": "A",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "0-3",
-        "x": 277,
-        "y": 132,
-        "w": 44,
-        "h": 30,
+        "x": 293,
+        "y": 156,
+        "w": 42,
+        "h": 33,
         "text": "C",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "1-0",
-        "x": 106,
-        "y": 79,
-        "w": 44,
-        "h": 30,
+        "x": 137,
+        "y": 98,
+        "w": 42,
+        "h": 33,
         "text": "A",
-        "shade": false
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "1-1",
-        "x": 163,
-        "y": 79,
-        "w": 44,
-        "h": 30,
+        "x": 189,
+        "y": 98,
+        "w": 42,
+        "h": 33,
         "text": "B",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "1-2",
-        "x": 220,
-        "y": 79,
-        "w": 44,
-        "h": 30,
+        "x": 241,
+        "y": 98,
+        "w": 42,
+        "h": 33,
         "text": "A",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "1-3",
-        "x": 277,
-        "y": 79,
-        "w": 44,
-        "h": 30,
+        "x": 293,
+        "y": 98,
+        "w": 42,
+        "h": 33,
         "text": "C",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "2-0",
-        "x": 106,
-        "y": 26,
-        "w": 44,
-        "h": 30,
+        "x": 137,
+        "y": 40,
+        "w": 42,
+        "h": 33,
         "text": "A",
-        "shade": false
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "2-1",
-        "x": 163,
-        "y": 26,
-        "w": 44,
-        "h": 30,
+        "x": 189,
+        "y": 40,
+        "w": 42,
+        "h": 33,
         "text": "B",
-        "shade": false
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "2-2",
-        "x": 220,
-        "y": 26,
-        "w": 44,
-        "h": 30,
+        "x": 241,
+        "y": 40,
+        "w": 42,
+        "h": 33,
         "text": "A",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "2-3",
-        "x": 277,
-        "y": 26,
-        "w": 44,
-        "h": 30,
+        "x": 293,
+        "y": 40,
+        "w": 42,
+        "h": 33,
         "text": "C",
-        "shade": true
+        "shade": true,
+        "kind": "card"
       }
     ],
     "edges": [],
     "labels": [
       [
         5,
-        146,
-        "3 titles: invalid"
+        169,
+        "1  Add C: invalid"
       ],
       [
         5,
-        93,
-        "Still 3 titles"
+        111,
+        "2  Remove A"
       ],
       [
         5,
-        40,
-        "2 titles: valid"
+        53,
+        "3  Remove B"
+      ],
+      [
+        5,
+        195,
+        "Shaded = active; white = already removed"
+      ],
+      [
+        243,
+        24,
+        "L = 2"
+      ],
+      [
+        294,
+        24,
+        "R = 3"
+      ],
+      [
+        5,
+        5,
+        "Distinct counts: 3 -> 3 -> 2. Only the last row is valid."
       ]
     ]
   },
   "boundary": {
-    "height": 143,
+    "title": "BINARY SEARCH FINDS THE FIRST TRUE POSITION",
+    "height": 181,
     "nodes": [
       {
         "id": "a",
-        "x": 18,
-        "y": 70,
-        "w": 90,
-        "h": 44,
-        "text": "3\nfalse",
-        "shade": false
+        "x": 7,
+        "y": 82,
+        "w": 102,
+        "h": 64,
+        "text": "index 0\ntime 3\nfalse",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "b",
-        "x": 132,
-        "y": 70,
-        "w": 90,
-        "h": 44,
-        "text": "7\nfalse",
-        "shade": true
+        "x": 126,
+        "y": 82,
+        "w": 102,
+        "h": 64,
+        "text": "index 1\ntime 7\nfalse",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "c",
-        "x": 246,
-        "y": 70,
-        "w": 90,
-        "h": 44,
-        "text": "12\ntrue",
-        "shade": false
+        "x": 245,
+        "y": 82,
+        "w": 102,
+        "h": 64,
+        "text": "index 2\ntime 12\ntrue",
+        "shade": false,
+        "kind": "card"
       }
     ],
-    "edges": [],
+    "edges": [
+      [
+        "c",
+        "b"
+      ]
+    ],
     "labels": [
       [
-        18,
-        126,
-        "Predicate: stored time > 9"
+        6,
+        161,
+        "Predicate: timestamp > 9"
       ],
       [
-        132,
-        44,
-        "Answer: predecessor"
+        128,
+        61,
+        "RETURN index 1"
       ],
       [
         246,
-        25,
-        "First true"
+        41,
+        "STOP at index 2"
+      ],
+      [
+        6,
+        8,
+        "Find the boundary first; return its predecessor."
       ]
     ]
   },
   "graph": {
-    "height": 191,
+    "title": "BFS: DISCOVERY PROCEEDS ONE HOP AT A TIME",
+    "height": 216,
     "nodes": [
       {
         "id": "a",
-        "x": 9,
-        "y": 78,
-        "w": 54,
-        "h": 38,
-        "text": "A",
-        "shade": false
+        "x": 5,
+        "y": 86,
+        "w": 72,
+        "h": 50,
+        "text": "A\ndistance 0",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "b",
-        "x": 144,
-        "y": 139,
-        "w": 54,
-        "h": 38,
-        "text": "B",
-        "shade": false
+        "x": 141,
+        "y": 151,
+        "w": 72,
+        "h": 50,
+        "text": "B\ndistance 1",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "c",
-        "x": 144,
-        "y": 17,
-        "w": 54,
-        "h": 38,
-        "text": "C",
-        "shade": false
+        "x": 141,
+        "y": 29,
+        "w": 72,
+        "h": 50,
+        "text": "C\ndistance 1",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "d",
-        "x": 287,
-        "y": 78,
-        "w": 54,
-        "h": 38,
-        "text": "D",
-        "shade": false
+        "x": 277,
+        "y": 86,
+        "w": 72,
+        "h": 50,
+        "text": "D\ndistance 2",
+        "shade": false,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -296,51 +374,45 @@
     ],
     "labels": [
       [
-        5,
-        5,
-        "Distance 0"
-      ],
-      [
-        144,
-        5,
-        "Distance 1"
-      ],
-      [
-        277,
-        5,
-        "Distance 2"
+        4,
+        7,
+        "Every edge costs one hop. Mark D when it is enqueued."
       ]
     ]
   },
   "choices": {
-    "height": 163,
+    "title": "COMPARE COMPLETE ALTERNATIVES, NOT LOCAL REWARDS",
+    "height": 210,
     "nodes": [
       {
         "id": "start",
-        "x": 89,
-        "y": 112,
-        "w": 177,
-        "h": 38,
-        "text": "best(i): take or skip",
-        "shade": false
+        "x": 80,
+        "y": 139,
+        "w": 194,
+        "h": 53,
+        "text": "At position 0\nrewards: [6, 10, 6]",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "skip",
-        "x": 8,
-        "y": 16,
-        "w": 153,
-        "h": 48,
-        "text": "Skip\nbest(i + 1)",
-        "shade": false
+        "x": 4,
+        "y": 43,
+        "w": 166,
+        "h": 57,
+        "text": "SKIP first 6\nbest(1) = 10",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "take",
-        "x": 192,
-        "y": 16,
-        "w": 153,
-        "h": 48,
-        "text": "Take\nreward[i] + best(i + 2)",
-        "shade": false
+        "x": 184,
+        "y": 43,
+        "w": 166,
+        "h": 57,
+        "text": "TAKE first 6\n6 + best(2) = 12",
+        "shade": true,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -353,148 +425,266 @@
         "take"
       ]
     ],
-    "labels": []
+    "labels": [
+      [
+        5,
+        15,
+        "Choose 12: positions 0 and 2. Shading marks the winning branch."
+      ]
+    ]
   },
   "lru": {
-    "height": 224,
+    "title": "LRU PROMOTION: SAME OBJECTS, DIFFERENT NEIGHBORS",
+    "height": 309,
     "nodes": [
       {
-        "id": "mapa",
-        "x": 214,
-        "y": 171,
-        "w": 84,
-        "h": 38,
-        "text": "Map: A",
-        "shade": false
+        "id": "h0",
+        "x": 3,
+        "y": 167,
+        "w": 49,
+        "h": 36,
+        "text": "head",
+        "shade": false,
+        "kind": "card"
       },
       {
-        "id": "mapb",
-        "x": 67,
-        "y": 171,
-        "w": 84,
-        "h": 38,
-        "text": "Map: B",
-        "shade": false
+        "id": "x0",
+        "x": 77,
+        "y": 167,
+        "w": 81,
+        "h": 36,
+        "text": "B / node B",
+        "shade": false,
+        "kind": "card"
       },
       {
-        "id": "b",
-        "x": 76,
-        "y": 94,
-        "w": 66,
-        "h": 38,
-        "text": "B",
-        "shade": false
+        "id": "y0",
+        "x": 196,
+        "y": 167,
+        "w": 81,
+        "h": 36,
+        "text": "A / node A",
+        "shade": true,
+        "kind": "card"
       },
       {
-        "id": "a",
-        "x": 223,
-        "y": 94,
-        "w": 66,
-        "h": 38,
-        "text": "A",
-        "shade": false
+        "id": "t0",
+        "x": 302,
+        "y": 167,
+        "w": 49,
+        "h": 36,
+        "text": "tail",
+        "shade": false,
+        "kind": "card"
       },
       {
-        "id": "a2",
-        "x": 76,
+        "id": "mx0",
+        "x": 77,
+        "y": 228,
+        "w": 81,
+        "h": 31,
+        "text": "map[B]",
+        "shade": false,
+        "kind": "card"
+      },
+      {
+        "id": "my0",
+        "x": 196,
+        "y": 228,
+        "w": 81,
+        "h": 31,
+        "text": "map[A]",
+        "shade": false,
+        "kind": "card"
+      },
+      {
+        "id": "h1",
+        "x": 3,
         "y": 17,
-        "w": 66,
-        "h": 38,
-        "text": "A",
-        "shade": true
+        "w": 49,
+        "h": 36,
+        "text": "head",
+        "shade": false,
+        "kind": "card"
       },
       {
-        "id": "b2",
-        "x": 223,
+        "id": "x1",
+        "x": 77,
         "y": 17,
-        "w": 66,
-        "h": 38,
-        "text": "B",
-        "shade": false
+        "w": 81,
+        "h": 36,
+        "text": "A / node A",
+        "shade": true,
+        "kind": "card"
+      },
+      {
+        "id": "y1",
+        "x": 196,
+        "y": 17,
+        "w": 81,
+        "h": 36,
+        "text": "B / node B",
+        "shade": false,
+        "kind": "card"
+      },
+      {
+        "id": "t1",
+        "x": 302,
+        "y": 17,
+        "w": 49,
+        "h": 36,
+        "text": "tail",
+        "shade": false,
+        "kind": "card"
+      },
+      {
+        "id": "mx1",
+        "x": 77,
+        "y": 78,
+        "w": 81,
+        "h": 31,
+        "text": "map[A]",
+        "shade": false,
+        "kind": "card"
+      },
+      {
+        "id": "my1",
+        "x": 196,
+        "y": 78,
+        "w": 81,
+        "h": 31,
+        "text": "map[B]",
+        "shade": false,
+        "kind": "card"
       }
     ],
     "edges": [
       [
-        "mapa",
-        "a"
+        "mx0",
+        "x0"
       ],
       [
-        "mapb",
-        "b"
+        "my0",
+        "y0"
       ],
       [
-        "b",
-        "a"
+        "h0",
+        "x0"
       ],
       [
-        "a",
-        "b"
+        "x0",
+        "h0"
       ],
       [
-        "a2",
-        "b2"
+        "x0",
+        "y0"
       ],
       [
-        "b2",
-        "a2"
+        "y0",
+        "x0"
+      ],
+      [
+        "y0",
+        "t0"
+      ],
+      [
+        "t0",
+        "y0"
+      ],
+      [
+        "mx1",
+        "x1"
+      ],
+      [
+        "my1",
+        "y1"
+      ],
+      [
+        "h1",
+        "x1"
+      ],
+      [
+        "x1",
+        "h1"
+      ],
+      [
+        "x1",
+        "y1"
+      ],
+      [
+        "y1",
+        "x1"
+      ],
+      [
+        "y1",
+        "t1"
+      ],
+      [
+        "t1",
+        "y1"
       ]
     ],
     "labels": [
       [
         4,
-        142,
-        "Newest at left"
+        287,
+        "BEFORE Get(A): B is most recent"
       ],
       [
         4,
-        108,
-        "Before"
+        137,
+        "AFTER Get(A): A is most recent"
       ],
       [
         4,
-        31,
-        "After"
+        3,
+        "Double arrows = next/prev links. Sentinels are not in the map."
       ]
     ]
   },
   "expiry": {
-    "height": 185,
+    "title": "STALE EXPIRY RECORDS CANNOT DELETE A REFRESH",
+    "height": 222,
     "nodes": [
       {
         "id": "old",
-        "x": 8,
-        "y": 129,
-        "w": 139,
-        "h": 44,
-        "text": "Due heap record\nA, generation 1",
-        "shade": false
+        "x": 4,
+        "y": 154,
+        "w": 153,
+        "h": 58,
+        "text": "Popped record\nA, generation 1\ndeadline 5",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "map",
-        "x": 203,
-        "y": 129,
-        "w": 143,
-        "h": 44,
-        "text": "Current map entry\nA, generation 2",
-        "shade": true
+        "x": 197,
+        "y": 154,
+        "w": 153,
+        "h": 58,
+        "text": "Current value\nA, generation 2\ndeadline 10",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "check",
-        "x": 93,
-        "y": 58,
-        "w": 169,
-        "h": 38,
-        "text": "Generations differ",
-        "shade": false
+        "x": 86,
+        "y": 75,
+        "w": 182,
+        "h": 53,
+        "text": "Compare generations\n1 != 2",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "out",
-        "x": 93,
-        "y": 3,
-        "w": 169,
-        "h": 38,
-        "text": "Ignore old record; keep A",
-        "shade": false
+        "x": 86,
+        "y": 6,
+        "w": 182,
+        "h": 48,
+        "text": "DISCARD record\nKEEP current A",
+        "shade": true,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -514,119 +704,122 @@
     "labels": []
   },
   "limiter": {
-    "height": 140,
+    "title": "EXACT WINDOW: EXPIRE BEFORE TESTING CAPACITY",
+    "height": 174,
     "nodes": [
       {
         "id": "0",
-        "x": 8,
-        "y": 59,
-        "w": 66,
-        "h": 45,
-        "text": "0\nexcluded",
-        "shade": false
+        "x": 5,
+        "y": 65,
+        "w": 74,
+        "h": 54,
+        "text": "time 0\nEXPIRED",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "4",
-        "x": 99,
-        "y": 59,
-        "w": 66,
-        "h": 45,
-        "text": "4\nincluded",
-        "shade": true
+        "x": 94,
+        "y": 65,
+        "w": 74,
+        "h": 54,
+        "text": "time 4\nACTIVE",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "9",
-        "x": 190,
-        "y": 59,
-        "w": 66,
-        "h": 45,
-        "text": "9\nincluded",
-        "shade": true
+        "x": 183,
+        "y": 65,
+        "w": 74,
+        "h": 54,
+        "text": "time 9\nACTIVE",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "10",
-        "x": 281,
-        "y": 59,
-        "w": 66,
-        "h": 45,
-        "text": "10\nincluded",
-        "shade": true
+        "x": 272,
+        "y": 65,
+        "w": 74,
+        "h": 54,
+        "text": "time 10\nNEW",
+        "shade": true,
+        "kind": "card"
       }
     ],
-    "edges": [
-      [
-        "0",
-        "4"
-      ],
-      [
-        "4",
-        "9"
-      ],
-      [
-        "9",
-        "10"
-      ]
-    ],
+    "edges": [],
     "labels": [
       [
-        8,
-        121,
-        "Window at t = 10: (0, 10]"
+        5,
+        150,
+        "At now = 10, accepted timestamps must be in (0, 10]."
       ],
       [
-        8,
-        23,
-        "Discard timestamp <= 0 before checking capacity."
+        5,
+        40,
+        "1  Remove 0.     2  Count 4 and 9.     3  Accept the new 10."
+      ],
+      [
+        5,
+        14,
+        "A second request at 10 is rejected: three slots are already used."
       ]
     ]
   },
   "scheduler": {
-    "height": 182,
+    "title": "DRAINING A HEAP IS NOT THE SAME AS RUNNING A JOB",
+    "height": 233,
     "nodes": [
       {
         "id": "heap",
-        "x": 8,
-        "y": 127,
-        "w": 138,
-        "h": 48,
-        "text": "Heap candidate\nA, due 5, generation 1",
-        "shade": false
+        "x": 4,
+        "y": 167,
+        "w": 157,
+        "h": 49,
+        "text": "Due heap record\nA, generation 1",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "map",
-        "x": 207,
-        "y": 127,
-        "w": 139,
-        "h": 48,
-        "text": "Current job\nA, due 9, generation 3",
-        "shade": true
+        "x": 194,
+        "y": 167,
+        "w": 157,
+        "h": 49,
+        "text": "Current job map\nA, generation 3",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "check",
-        "x": 91,
-        "y": 57,
-        "w": 173,
-        "h": 38,
-        "text": "Current generation matches?",
-        "shade": false
+        "x": 63,
+        "y": 88,
+        "w": 228,
+        "h": 51,
+        "text": "Key exists AND generation matches?",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "no",
-        "x": 9,
-        "y": 1,
-        "w": 145,
-        "h": 38,
-        "text": "No: discard record",
-        "shade": false
+        "x": 4,
+        "y": 19,
+        "w": 157,
+        "h": 48,
+        "text": "NO: discard record\nA remains scheduled",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "yes",
-        "x": 200,
-        "y": 1,
-        "w": 145,
-        "h": 38,
-        "text": "Yes: claim and emit",
-        "shade": false
+        "x": 194,
+        "y": 19,
+        "w": 157,
+        "h": 48,
+        "text": "YES: remove claim\nthen emit the job",
+        "shade": false,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -647,55 +840,67 @@
         "yes"
       ]
     ],
-    "labels": []
+    "labels": [
+      [
+        5,
+        3,
+        "For this record, follow NO. Shading marks the actual outcome."
+      ]
+    ]
   },
   "ranking": {
-    "height": 281,
+    "title": "RANKING PIPELINE: EACH STAGE HAS ONE JOB",
+    "height": 329,
     "nodes": [
       {
         "id": "raw",
-        "x": 72,
-        "y": 232,
-        "w": 210,
-        "h": 38,
-        "text": "Raw: A9, A8, B8, C7, D7",
-        "shade": false
+        "x": 31,
+        "y": 260,
+        "w": 292,
+        "h": 53,
+        "text": "1  INPUT\nA9, A8, B8, C7, D7",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "filter",
-        "x": 72,
-        "y": 174,
-        "w": 210,
-        "h": 38,
-        "text": "Eligible: A9, A8, C7, D7",
-        "shade": false
+        "x": 31,
+        "y": 197,
+        "w": 292,
+        "h": 53,
+        "text": "2  FILTER: B is unavailable\nA9, A8, C7, D7",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "unique",
-        "x": 72,
-        "y": 116,
-        "w": 210,
-        "h": 38,
-        "text": "Distinct: A9, C7, D7",
-        "shade": false
+        "x": 31,
+        "y": 134,
+        "w": 292,
+        "h": 53,
+        "text": "3  DEDUPLICATE: keep highest eligible A\nA9, C7, D7",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "rank",
-        "x": 72,
-        "y": 58,
-        "w": 210,
-        "h": 38,
-        "text": "Rank: score down, ID up",
-        "shade": false
+        "x": 31,
+        "y": 71,
+        "w": 292,
+        "h": 53,
+        "text": "4  ORDER: score descending, ID ascending\nA9, C7, D7",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "top",
-        "x": 72,
-        "y": 0,
-        "w": 210,
-        "h": 38,
-        "text": "Top two: A9, C7",
-        "shade": true
+        "x": 31,
+        "y": 8,
+        "w": 292,
+        "h": 53,
+        "text": "5  TAKE TWO\nA9, C7",
+        "shade": true,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -719,43 +924,48 @@
     "labels": []
   },
   "transactions": {
-    "height": 212,
+    "title": "OVERLAY LOOKUP: DELETED IS NOT THE SAME AS ABSENT",
+    "height": 245,
     "nodes": [
       {
         "id": "query",
-        "x": 70,
-        "y": 171,
-        "w": 214,
-        "h": 38,
-        "text": "Get A",
-        "shade": false
+        "x": 61,
+        "y": 196,
+        "w": 232,
+        "h": 34,
+        "text": "Get(A)",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "inner",
-        "x": 70,
-        "y": 114,
-        "w": 214,
-        "h": 48,
-        "text": "Inner: A is deleted\nStop here: return missing",
-        "shade": true
+        "x": 61,
+        "y": 123,
+        "w": 232,
+        "h": 54,
+        "text": "1  INNER: tombstone for A\nSTOP -> missing",
+        "shade": true,
+        "kind": "card"
       },
       {
         "id": "outer",
-        "x": 70,
-        "y": 57,
-        "w": 214,
-        "h": 38,
-        "text": "Outer: A = 2 (not consulted)",
-        "shade": false
+        "x": 61,
+        "y": 60,
+        "w": 232,
+        "h": 46,
+        "text": "2  OUTER: A = 2\nNot visited",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "base",
-        "x": 70,
-        "y": 0,
-        "w": 214,
-        "h": 38,
-        "text": "Base: A = 1 (not consulted)",
-        "shade": false
+        "x": 61,
+        "y": 4,
+        "w": 232,
+        "h": 46,
+        "text": "3  BASE: A = 1\nNot visited",
+        "shade": false,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -767,43 +977,58 @@
     "labels": []
   },
   "combined": {
-    "height": 193,
+    "title": "THREE QUERIES, ONE AUTHORITATIVE RESIDENT",
+    "height": 258,
     "nodes": [
       {
         "id": "map",
-        "x": 5,
-        "y": 135,
+        "x": 4,
+        "y": 184,
         "w": 108,
-        "h": 48,
-        "text": "Key map\nWhich current entry?",
-        "shade": false
+        "h": 51,
+        "text": "KEY MAP\nFind by key",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "list",
         "x": 123,
-        "y": 135,
+        "y": 184,
         "w": 108,
-        "h": 48,
-        "text": "Recency list\nWhich capacity victim?",
-        "shade": false
+        "h": 51,
+        "text": "RECENCY\nFind victim",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "heap",
-        "x": 241,
-        "y": 135,
+        "x": 242,
+        "y": 184,
         "w": 108,
-        "h": 48,
-        "text": "Deadline heap\nWhich record is due?",
-        "shade": false
+        "h": 51,
+        "text": "DEADLINES\nFind due record",
+        "shade": false,
+        "kind": "card"
+      },
+      {
+        "id": "check",
+        "x": 211,
+        "y": 97,
+        "w": 139,
+        "h": 51,
+        "text": "Lookup current key;\ncheck generation",
+        "shade": false,
+        "kind": "card"
       },
       {
         "id": "node",
-        "x": 92,
-        "y": 23,
-        "w": 170,
-        "h": 54,
-        "text": "Current node\nkey, value, deadline, generation",
-        "shade": true
+        "x": 30,
+        "y": 10,
+        "w": 290,
+        "h": 58,
+        "text": "CURRENT NODE\nkey, value, deadline, generation, prev, next",
+        "shade": true,
+        "kind": "card"
       }
     ],
     "edges": [
@@ -817,19 +1042,18 @@
       ],
       [
         "heap",
+        "check"
+      ],
+      [
+        "check",
         "node"
       ]
     ],
     "labels": [
       [
-        206,
-        91,
-        "Check generation"
-      ],
-      [
-        107,
-        5,
-        "Remove updates map and list."
+        4,
+        246,
+        "Map/list refer to current nodes; heap records may be stale."
       ]
     ]
   }

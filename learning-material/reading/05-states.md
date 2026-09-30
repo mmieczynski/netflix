@@ -89,3 +89,27 @@ A bottom-up implementation walks from the last position toward the first. Keep t
 For four, one, one, four, begin beyond the end with zero and zero. The final four produces best four. The preceding one produces best four. The next one produces best five. The first four produces best eight by combining itself with the best suffix beginning at the third position. The returned eight corresponds to selecting the two ends.
 
 The loop uses linear time and constant auxiliary storage. To return the chosen positions, keep the table of suffix answers or equivalent decisions, then walk forward: compare taking with skipping under a defined tie policy. Taking advances two positions; skipping advances one. This reconstruction requires information discarded by the two-number optimization, so the extra output requirement affects space.
+
+## Go example: keep only the two suffix answers needed
+
+This complete function computes the maximum reward when neighboring positions cannot both be selected. Selecting nothing is allowed. Rewards and their sums must fit int64. The code returns the best number, not the chosen positions.
+
+```go
+func BestNonAdjacent(reward []int64) int64 {
+    var next, afterNext int64
+    for i := len(reward) - 1; i >= 0; i-- {
+        take := reward[i] + afterNext
+        current := next // Skip position i.
+        if take > current {
+            current = take
+        }
+        afterNext = next
+        next = current
+    }
+    return next
+}
+```
+
+At the start of an iteration, next is the best suffix beginning at i+1 and afterNext is the best suffix beginning at i+2. For 6, 10, 6, the successive best values are six, ten, and twelve. Assigning `afterNext = next` before overwriting next preserves the old suffix answer. Reversing those assignments would overwrite information still needed.
+
+Empty input returns zero. All-negative input also returns zero under the stated contract. If choosing at least one element is mandatory, the initial zero states and recurrence need reconsideration. Time is linear and extra space constant. Recovering the selected indices would require retaining decisions or recomputing them; the two rolling values alone deliberately discard that history.

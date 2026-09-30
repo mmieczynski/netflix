@@ -133,3 +133,35 @@ At time twelve, e1 falls on the excluded left boundary. Subtract four from A, le
 | 19 | 0 | 0 | No active title |
 
 At time eighteen, the event at eight is excluded; at nineteen, the event at nine is excluded. These equalities are useful tests because they expose inconsistent boundary rules between ingestion, expiration, and querying. Combining components successfully means their contracts agree, not merely that each component works in isolation.
+
+## Go example: compose filtering, identity, and aggregation
+
+This complete batch aggregation core assumes positive durations, identical payloads for duplicate IDs, a positive window, and arithmetic fitting int64. Invalid-input validation belongs before this core. Input order is arbitrary. Its output is the totals map consumed by the ranking stage, not the final top-k list.
+
+```go
+type WatchEvent struct {
+    ID, Title string
+    At, Minutes int64
+}
+
+func RecentTotals(events []WatchEvent,
+    now, window int64) map[string]int64 {
+    seen := make(map[string]bool)
+    totals := make(map[string]int64)
+    for _, event := range events {
+        if event.At <= now-window || event.At > now {
+            continue
+        }
+        if seen[event.ID] {
+            continue
+        }
+        seen[event.ID] = true
+        totals[event.Title] += event.Minutes
+    }
+    return totals
+}
+```
+
+For e1=A4 at two, e2=B6 at eight, e3=A3 at nine, and a repeated e2, querying at twelve with width ten returns A:3 and B:6. e1 is exactly on the excluded left boundary. The second e2 is ignored before aggregation, so B does not become twelve. A future event is excluded even if its ID has not appeared before.
+
+Filtering before deduplication is safe here because duplicate payloads are identical. If an ID can arrive with a corrected timestamp or duration, a canonical-version rule must precede this core. The expected work is linear in input events, with space for distinct accepted event IDs and titles. Unlike the streaming design, a new batch query rebuilds these summaries and therefore needs no inverse operation for expiration.

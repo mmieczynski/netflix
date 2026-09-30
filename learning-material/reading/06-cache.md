@@ -89,3 +89,49 @@ Get looks up the key. A miss returns missing without mutation. A hit detaches th
 For capacity two, Put A then B produces B, A. Get A produces A, B. Put C produces C, A after evicting B. Overwrite A with value zero produces A, C; Get A must return zero with found true. This last observation tests the absence representation independently of the ordering.
 
 The public methods preserve one-to-one map/list membership and valid neighboring links. Every operation has expected constant work under the count capacity. If concurrency is added, protect the entire public transition with one mutex first; Get requires the exclusive lock because promotion mutates links. Do not separately lock each helper in a way that leaves inconsistent intermediate states visible or recursively reacquires the same mutex.
+
+## Go example: move a known node with local pointer edits
+
+These are complete list helpers and a cache Get method, not the full cache. The constructor must allocate an empty key map and connect head.next to tail and tail.prev to head. Head and tail are sentinels outside the key map. Put and eviction follow the program design above. No concurrent callers are assumed.
+
+```go
+type cacheNode struct {
+    key string
+    value int
+    prev, next *cacheNode
+}
+
+type ReadCache struct {
+    byKey map[string]*cacheNode
+    head, tail *cacheNode
+}
+
+func detach(n *cacheNode) {
+    n.prev.next = n.next
+    n.next.prev = n.prev
+    n.prev, n.next = nil, nil
+}
+
+func insertFront(head, n *cacheNode) {
+    first := head.next
+    n.prev, n.next = head, first
+    head.next = n
+    first.prev = n
+}
+```
+
+Detach assumes a linked real node. InsertFront assumes a detached node and a valid sentinel head. Those preconditions let each helper avoid unnecessary boundary branches. Neither helper changes the key map: promotion moves the same object rather than replacing its identity.
+
+```go
+func (c *ReadCache) Get(key string) (int, bool) {
+    n, found := c.byKey[key]
+    if !found {
+        return 0, false
+    }
+    detach(n)
+    insertFront(c.head, n)
+    return n.value, true
+}
+```
+
+With B followed by A, Get A joins B to tail, then inserts A between head and B. The map continues to point to the same A node. Getting the already-first node is also safe: detach and reinsert restore its position. A missing key takes no pointer path. Count the assignments rather than the list length to see why a hit does constant list work. If concurrency is added, the lock must cover the entire Get transition, including both helpers.

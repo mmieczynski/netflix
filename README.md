@@ -8,6 +8,8 @@ Read the [PDF](output/pdf/netflix-go-interview-book.pdf), the
 [book introduction](learning-material/BOOK-INTRO.md), or the
 [reading chapters](learning-material/reading/). The book develops concepts through
 worked examples, vector diagrams, state tables, and complete program designs.
+Each chapter also includes an explained Go example, with assumptions, a small
+trace, and the connection between the code and its invariant.
 The [conversation sessions](learning-material/sessions/) retain their questions
 and coaching notes. Neither route requires an editor, code execution, or timed work.
 
@@ -61,6 +63,8 @@ documentation from original exercises. These are not confirmed Netflix questions
 - `learning-material/book.txt`: complete plain-text edition.
 - `output/pdf/netflix-go-interview-book.pdf`: portable reading edition.
 - `learning-material/build_pdf.py`: regenerates the PDF and text edition.
+- `learning-material/sync_reading_code.py`: extracts reading examples for compiler checks.
+- `learning-material/readingcode/`: generated examples and their behavior tests.
 - `learning-material/*.go`: optional reference code; the book stands without it.
 
 To regenerate the editions, install the dependencies in

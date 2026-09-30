@@ -100,3 +100,34 @@ Get finds the history and searches for the first version whose timestamp is grea
 With quality at time ten equal to HD and at twenty equal to UHD, Get at fifteen returns HD. At nine it returns missing; at twenty it returns UHD; at thirty it still returns UHD. Replacing the time-twenty value with HDR changes the last three relevant answers without adding a duplicate timestamp. Attempting a time-twelve write afterward is rejected under this contract.
 
 Set is amortized constant time for ordered writes. Get is logarithmic in the versions for the requested key, plus expected map lookup. Allowing arbitrary historical insertion changes Set: a sorted slice needs a search and potentially linear shifting. The new write contract should not silently invalidate Get's binary-search precondition.
+
+## Go example: implement the predecessor search
+
+The version timestamps must be strictly increasing; equal-time writes have already been resolved. This complete binary search narrows unresolved elements in [lo, hi). When that interval is empty, lo is the first greater position, possibly the slice length.
+
+```go
+type Version struct {
+    At int64
+    Value string
+}
+
+func VersionAt(v []Version, at int64) (string, bool) {
+    lo, hi := 0, len(v)
+    for lo < hi {
+        mid := lo + (hi-lo)/2
+        if v[mid].At <= at {
+            lo = mid + 1
+        } else {
+            hi = mid
+        }
+    }
+    if lo == 0 {
+        return "", false
+    }
+    return v[lo-1].Value, true
+}
+```
+
+For timestamps 3, 7, 12 and query nine, the first branch discards timestamps through seven. The second keeps twelve as the candidate boundary. The answer is the preceding record at seven. Empty input and a query before the first write both finish with lo equal to zero and return missing. A query after the final write finishes with lo equal to the slice length and returns its final record.
+
+The explicit `lo == 0` guard prevents an index of minus one. There is no separate exact-match branch: the less-than-or-equal comparison sends an equal timestamp into the eligible prefix. Time is logarithmic in the number of versions; auxiliary space is constant.

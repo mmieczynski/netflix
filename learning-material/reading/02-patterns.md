@@ -91,3 +91,34 @@ The shrinking loop is essential. One removal may not eliminate a distinct title 
 The map invariant is exact counts of titles between left and right, inclusive. The validity invariant is checked after shrinking. Left never moves backward, so each event is added once and removed at most once. Total work is linear; the count map holds at most three keys during the immediate repair step for this fixed distinct-title bound.
 
 To return the actual interval, store the best starting position whenever a new best length is found. Define ties: retaining the first best found returns the earliest longest interval. This extension changes output bookkeeping without changing the window invariant. Useful mental tests are an empty sequence, all one title, A-B-A, and A-B-C-B. They exercise absence, duplicates, a valid repeated title, and necessary shrinking.
+
+## Go example: repair the window before measuring it
+
+This complete function implements the earlier at-most-two-title example. `count` contains only positive frequencies, so its length is exactly the number of distinct titles in the window. The input slice is read without mutation.
+
+```go
+func LongestTwo(titles []string) int {
+    count := make(map[string]int)
+    left, best := 0, 0
+    for right, title := range titles {
+        count[title]++
+        for len(count) > 2 {
+            old := titles[left]
+            count[old]--
+            if count[old] == 0 {
+                delete(count, old)
+            }
+            left++
+        }
+        length := right - left + 1
+        if length > best {
+            best = length
+        }
+    }
+    return best
+}
+```
+
+For A, B, A, C, C, the result is three. On the first C, the inner loop removes A once and then B; a single `if` would leave the window invalid. Deleting a zero count is equally important: leaving a zero-valued B entry would make `len(count)` overstate distinct membership. Empty input returns zero because the outer loop never runs.
+
+Each index enters and leaves at most once, giving expected linear time. With a fixed two-title limit the map holds at most three distinct keys during repair, so its auxiliary entry count is constant. This bound relies on deleting zero counts.

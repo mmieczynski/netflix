@@ -92,3 +92,34 @@ Commit first checks that an overlay exists. Remove that overlay from the stack, 
 With base A equal to five, Begin then Set A to ten affects only the outer overlay. Begin again and Set A to twenty affects the inner one. Commit inner moves twenty into outer. Rollback outer discards it, leaving base five. If inner Delete A is committed instead, the outer overlay must contain a tombstone; merely deleting A from the overlay would reveal the original five too early.
 
 Get costs up to one map lookup per active depth. Commit work is proportional to the number of changes in the top overlay. This is a single-threaded nesting model, not an implementation of all database isolation levels. Adding concurrent transactions requires a visibility and conflict policy beyond simply putting a mutex around each method.
+
+## Go example: distinguish a tombstone from no instruction
+
+This complete read operation searches transaction overlays from newest to oldest, then the base map. Each overlay maps keys to edits. A missing key, including in a nil overlay map, means that layer has no opinion; an explicit Deleted edit stops lookup. Writes and commit are separate operations described earlier.
+
+```go
+type Edit struct {
+    Value string
+    Deleted bool
+}
+
+func ReadLayered(base map[string]string,
+    layers []map[string]Edit, key string) (string, bool) {
+    for i := len(layers) - 1; i >= 0; i-- {
+        edit, found := layers[i][key]
+        if !found {
+            continue
+        }
+        if edit.Deleted {
+            return "", false
+        }
+        return edit.Value, true
+    }
+    value, found := base[key]
+    return value, found
+}
+```
+
+For base A:1, outer A:2, and inner A:deleted, this returns missing immediately from the inner layer. Removing the inner layer reveals two. Removing both layers reveals one. Setting A to the empty string in the inner layer returns empty and true; the Deleted flag prevents that valid value from being mistaken for a tombstone.
+
+The critical distinction occurs before the value is inspected: `found` says whether the layer has an instruction at all. Deletion is one such instruction. With d overlays, a lookup makes at most d+1 expected constant-time map lookups, so its expected time is O(d), with constant extra space.

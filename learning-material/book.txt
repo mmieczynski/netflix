@@ -2,7 +2,7 @@ Learning to solve coding problems
 
 This is the reading edition of the Netflix L5 Go interview course. It prepares you for the first live technical interview with another senior engineer. You can read it independently on an e-reader, without an editor, a timer, or an AI conversation. The companion conversation edition teaches the same topics through short explanations, questions, feedback, and verbal program design.
 
-The book teaches through explanations, worked examples, diagrams, and state tables. The implementation discussions cover inputs, outputs, fields, helpers, branches, mutations, return values, and tests described in words. Small Go snippets illustrate language details; understanding the chapter does not depend on executing them. The PDF is not a transcript of the tutor's question bank.
+The book teaches through explanations, worked examples, diagrams, state tables, and Go code. Each chapter has an explained Go example connecting its invariant to concrete fields, branches, and mutations. Some are complete algorithms; cache, expiration, and scheduling examples isolate a core operation and explicitly state what the surrounding program supplies. You can trace the examples on the page without executing them. The PDF is not a transcript of the tutor's question bank.
 
 What learning an approach means
 
@@ -155,6 +155,27 @@ On A, B, A, the first two calls return true and the third false. History remains
 
 Accept is expected constant time, with amortized append cost. Returning a protected snapshot costs linear time in the number of distinct IDs. If the next requirement is Remove, deleting from the set is easy but preserving slice order requires finding and shifting the ID. That new operation changes the workload and may justify another representation.
 
+Go example: preserve zero and missing separately
+
+This complete function copies the record out of a map and returns its presence separately. The caller owns the map; the function does not mutate it. A map can be nil here because reads are allowed even when no storage was allocated.
+
+
+type Movie struct {
+    Title string
+    Minutes int
+}
+
+func LookupMovie(movies map[string]Movie,
+    id string) (Movie, bool) {
+    movie, found := movies[id]
+    return movie, found
+}
+
+
+With A stored as Movie{Title: "A", Minutes: 0}, looking up A returns that record and true. Looking up B returns the zero-valued Movie and false. Testing Minutes against zero would confuse these outcomes. The := declares local variables, while the second result from a map lookup records presence. Returning a struct copies its fields; it does not expose a pointer to the map entry. If a field were itself a slice or map, that field's underlying storage would still be shared.
+
+Expected lookup time is constant for bounded-size keys. The useful design choice is the result contract, not the function's size: callers can distinguish a valid empty value from absence without a special sentinel.
+
 
 Chapter 2 — Hashing arrays and sliding windows
 
@@ -249,6 +270,37 @@ The shrinking loop is essential. One removal may not eliminate a distinct title 
 The map invariant is exact counts of titles between left and right, inclusive. The validity invariant is checked after shrinking. Left never moves backward, so each event is added once and removed at most once. Total work is linear; the count map holds at most three keys during the immediate repair step for this fixed distinct-title bound.
 
 To return the actual interval, store the best starting position whenever a new best length is found. Define ties: retaining the first best found returns the earliest longest interval. This extension changes output bookkeeping without changing the window invariant. Useful mental tests are an empty sequence, all one title, A-B-A, and A-B-C-B. They exercise absence, duplicates, a valid repeated title, and necessary shrinking.
+
+Go example: repair the window before measuring it
+
+This complete function implements the earlier at-most-two-title example. count contains only positive frequencies, so its length is exactly the number of distinct titles in the window. The input slice is read without mutation.
+
+
+func LongestTwo(titles []string) int {
+    count := make(map[string]int)
+    left, best := 0, 0
+    for right, title := range titles {
+        count[title]++
+        for len(count) > 2 {
+            old := titles[left]
+            count[old]--
+            if count[old] == 0 {
+                delete(count, old)
+            }
+            left++
+        }
+        length := right - left + 1
+        if length > best {
+            best = length
+        }
+    }
+    return best
+}
+
+
+For A, B, A, C, C, the result is three. On the first C, the inner loop removes A once and then B; a single if would leave the window invalid. Deleting a zero count is equally important: leaving a zero-valued B entry would make len(count) overstate distinct membership. Empty input returns zero because the outer loop never runs.
+
+Each index enters and leaves at most once, giving expected linear time. With a fixed two-title limit the map holds at most three distinct keys during repair, so its auxiliary entry count is constant. This bound relies on deleting zero counts.
 
 
 Chapter 3 — Sorting binary search intervals and heaps
@@ -354,6 +406,37 @@ With quality at time ten equal to HD and at twenty equal to UHD, Get at fifteen 
 
 Set is amortized constant time for ordered writes. Get is logarithmic in the versions for the requested key, plus expected map lookup. Allowing arbitrary historical insertion changes Set: a sorted slice needs a search and potentially linear shifting. The new write contract should not silently invalidate Get's binary-search precondition.
 
+Go example: implement the predecessor search
+
+The version timestamps must be strictly increasing; equal-time writes have already been resolved. This complete binary search narrows unresolved elements in [lo, hi). When that interval is empty, lo is the first greater position, possibly the slice length.
+
+
+type Version struct {
+    At int64
+    Value string
+}
+
+func VersionAt(v []Version, at int64) (string, bool) {
+    lo, hi := 0, len(v)
+    for lo < hi {
+        mid := lo + (hi-lo)/2
+        if v[mid].At <= at {
+            lo = mid + 1
+        } else {
+            hi = mid
+        }
+    }
+    if lo == 0 {
+        return "", false
+    }
+    return v[lo-1].Value, true
+}
+
+
+For timestamps 3, 7, 12 and query nine, the first branch discards timestamps through seven. The second keeps twelve as the candidate boundary. The answer is the preceding record at seven. Empty input and a query before the first write both finish with lo equal to zero and return missing. A query after the final write finishes with lo equal to the slice length and returns its final record.
+
+The explicit lo == 0 guard prevents an index of minus one. There is no separate exact-match branch: the less-than-or-equal comparison sends an equal timestamp into the eligible prefix. Time is logarithmic in the number of versions; auxiliary space is constant.
+
 
 Chapter 4 — Trees graphs and dependencies
 
@@ -413,7 +496,7 @@ Worked example: two routes to the same vertex
 
 Consider edges A to B, A to C, B to D, and C to D. Starting at A, find the minimum number of edges to D. Breadth-first search processes the frontier in layers. The queue is not just storage for pending work; its order represents increasing distance from the start.
 
-Figure: A diamond-shaped graph. B and C both discover D, but only the first discovery enqueues it.
+Figure: Every edge costs one hop. B and C both have edges to D, but only the first discovery enqueues D.
 
 | Removed from queue | Newly discovered | Queue afterward |
 | --- | --- | --- |
@@ -447,6 +530,33 @@ Use a head index to consume that queue. Each removed job becomes the next output
 For A before C and B before C, initial counts are zero for A and B and two for C. Finishing A drops C to one. Finishing B drops C to zero and makes it ready. A, B, C is valid, as is B, A, C. Add an isolated D and it must still appear somewhere. Add C before A and a dependency cycle now blocks at least A and C.
 
 Validation, graph construction, readiness processing, and final completeness checking are useful conceptual stages. Their combined work is linear in vertices plus edges. If the smallest available job must always be chosen, replace the ready queue with a min heap, accepting logarithmic ready-set operations. This changes tie policy rather than dependency meaning.
+
+Go example: record discovery when enqueuing
+
+This complete BFS returns minimum hop counts from a start vertex. Missing adjacency entries mean no outgoing edges. Vertex IDs are strings, and edges have equal cost. The slice is a queue with a head index, avoiding removal from its front.
+
+
+func HopDistances(edges map[string][]string,
+    start string) map[string]int {
+    distance := map[string]int{start: 0}
+    queue := []string{start}
+    for head := 0; head < len(queue); head++ {
+        from := queue[head]
+        for _, to := range edges[from] {
+            if _, seen := distance[to]; seen {
+                continue
+            }
+            distance[to] = distance[from] + 1
+            queue = append(queue, to)
+        }
+    }
+    return distance
+}
+
+
+In the diamond graph, B records D's distance as two before C is processed. C then sees D already in the map and does not enqueue it again. The map doubles as the visited set and the result, so there is no second membership structure to keep synchronized. A cycle back to A also stops because A was registered at initialization.
+
+An unreachable vertex is absent from the result; distance zero belongs to the start and does not mean unreachable. The caller must use the same comma-ok lookup introduced in chapter one. Work is linear in reachable vertices and their outgoing edges. The head-index queue retains its backing array until this traversal finishes; its maximum retained storage is linear in discovered vertices.
 
 
 Chapter 5 — Stacks greedy choices and dynamic programming
@@ -541,6 +651,30 @@ For four, one, one, four, begin beyond the end with zero and zero. The final fou
 
 The loop uses linear time and constant auxiliary storage. To return the chosen positions, keep the table of suffix answers or equivalent decisions, then walk forward: compare taking with skipping under a defined tie policy. Taking advances two positions; skipping advances one. This reconstruction requires information discarded by the two-number optimization, so the extra output requirement affects space.
 
+Go example: keep only the two suffix answers needed
+
+This complete function computes the maximum reward when neighboring positions cannot both be selected. Selecting nothing is allowed. Rewards and their sums must fit int64. The code returns the best number, not the chosen positions.
+
+
+func BestNonAdjacent(reward []int64) int64 {
+    var next, afterNext int64
+    for i := len(reward) - 1; i >= 0; i-- {
+        take := reward[i] + afterNext
+        current := next // Skip position i.
+        if take > current {
+            current = take
+        }
+        afterNext = next
+        next = current
+    }
+    return next
+}
+
+
+At the start of an iteration, next is the best suffix beginning at i+1 and afterNext is the best suffix beginning at i+2. For 6, 10, 6, the successive best values are six, ten, and twelve. Assigning afterNext = next before overwriting next preserves the old suffix answer. Reversing those assignments would overwrite information still needed.
+
+Empty input returns zero. All-negative input also returns zero under the stated contract. If choosing at least one element is mandatory, the initial zero states and recurrence need reconsideration. Time is linear and extra space constant. Recovering the selected indices would require retaining decisions or recomputing them; the two rolling values alone deliberately discard that history.
+
 
 Chapter 6 — LRU and weighted caches
 
@@ -633,6 +767,52 @@ Get looks up the key. A miss returns missing without mutation. A hit detaches th
 For capacity two, Put A then B produces B, A. Get A produces A, B. Put C produces C, A after evicting B. Overwrite A with value zero produces A, C; Get A must return zero with found true. This last observation tests the absence representation independently of the ordering.
 
 The public methods preserve one-to-one map/list membership and valid neighboring links. Every operation has expected constant work under the count capacity. If concurrency is added, protect the entire public transition with one mutex first; Get requires the exclusive lock because promotion mutates links. Do not separately lock each helper in a way that leaves inconsistent intermediate states visible or recursively reacquires the same mutex.
+
+Go example: move a known node with local pointer edits
+
+These are complete list helpers and a cache Get method, not the full cache. The constructor must allocate an empty key map and connect head.next to tail and tail.prev to head. Head and tail are sentinels outside the key map. Put and eviction follow the program design above. No concurrent callers are assumed.
+
+
+type cacheNode struct {
+    key string
+    value int
+    prev, next *cacheNode
+}
+
+type ReadCache struct {
+    byKey map[string]*cacheNode
+    head, tail *cacheNode
+}
+
+func detach(n *cacheNode) {
+    n.prev.next = n.next
+    n.next.prev = n.prev
+    n.prev, n.next = nil, nil
+}
+
+func insertFront(head, n *cacheNode) {
+    first := head.next
+    n.prev, n.next = head, first
+    head.next = n
+    first.prev = n
+}
+
+
+Detach assumes a linked real node. InsertFront assumes a detached node and a valid sentinel head. Those preconditions let each helper avoid unnecessary boundary branches. Neither helper changes the key map: promotion moves the same object rather than replacing its identity.
+
+
+func (c *ReadCache) Get(key string) (int, bool) {
+    n, found := c.byKey[key]
+    if !found {
+        return 0, false
+    }
+    detach(n)
+    insertFront(c.head, n)
+    return n.value, true
+}
+
+
+With B followed by A, Get A joins B to tail, then inserts A between head and B. The map continues to point to the same A node. Getting the already-first node is also safe: detach and reinsert restore its position. A missing key takes no pointer path. Count the assignments rather than the list length to see why a hit does constant list work. If concurrency is added, the lock must cover the entire Get transition, including both helpers.
 
 
 Chapter 7 — Expiration clocks and concurrency
@@ -737,6 +917,41 @@ Write A at zero with deadline ten. At five, overwrite it with deadline thirty an
 
 Put costs logarithmic time in heap size; Get is expected constant time; Cleanup costs according to the number of records popped. Heap size includes stale records, so repeated overwrites can grow memory. An indexed heap or periodic rebuilding addresses that extension. Adding a single mutex around public operations protects state, provided the injected clock is safe and does not reenter this cache.
 
+Go example: validate a due record against current identity
+
+This helper applies one expiry record after a deadline heap yields it. For this standalone TTL map, deadline is in integer ticks and generations are fresh for every write, including delete-and-reinsert. Map access is owned by one goroutine or one external lock. A combined LRU cache must call its central removal helper instead of only deleting from the map.
+
+
+type TimedValue struct {
+    Value string
+    Deadline int64
+    Generation uint64
+}
+
+type Expiry struct {
+    Key string
+    Deadline int64
+    Generation uint64
+}
+
+func ApplyExpiry(current map[string]TimedValue,
+    record Expiry, now int64) bool {
+    if record.Deadline > now {
+        return false
+    }
+    entry, found := current[record.Key]
+    if !found || entry.Generation != record.Generation {
+        return false
+    }
+    delete(current, record.Key)
+    return true
+}
+
+
+If the popped record is A generation one while the map holds generation two, the comparison prevents deletion. A missing key also returns false. At exactly the deadline, a matching generation is removed. The boolean reports an actual resident removal, not merely processing a heap record.
+
+The helper relies on the invariant that a matching generation identifies a write whose stored deadline equals the record's deadline. Get must still check visibility at read time; a cleanup helper alone cannot promise that a value is fresh when cleanup has not run. Each helper call has expected constant map work; the surrounding heap pop costs logarithmic time in heap records, including stale ones.
+
 
 Chapter 8 — Rate limiting and rolling windows
 
@@ -834,6 +1049,37 @@ For a token bucket, the fields are capacity, refill rate, current tokens, and la
 
 A capacity-three bucket starts with three immediate acceptances and then rejects. After one second at one token per second it accepts one more. Long idle time returns it only to capacity. These tests validate a different guarantee from the exact rolling log. The two structs share an admission API but should not be presented as interchangeable implementations of the same rule.
 
+Go example: expire, count, then admit
+
+This complete single-user limiter uses nondecreasing integer-second timestamps, a positive window, and a nonnegative limit. Timestamps and subtraction must fit int64. Construction supplies those fields; callers are serialized. The method counts accepted requests only.
+
+
+type WindowLimiter struct {
+    Window int64
+    Limit int
+    accepted []int64
+}
+
+func (l *WindowLimiter) Allow(now int64) bool {
+    cutoff := now - l.Window
+    expired := 0
+    for expired < len(l.accepted) &&
+        l.accepted[expired] <= cutoff {
+        expired++
+    }
+    l.accepted = l.accepted[expired:]
+    if len(l.accepted) >= l.Limit {
+        return false
+    }
+    l.accepted = append(l.accepted, now)
+    return true
+}
+
+
+For Window ten and Limit three, requests 0, 4, 9, 10, 10 produce true, true, true, true, false. At time ten, timestamp zero is removed before capacity is checked. A rejected request is not appended, so retries do not silently change the policy. Limit zero denies every request.
+
+Each accepted timestamp is appended once and discarded once, yielding amortized constant queue work per request. A single request may expire many timestamps. Reslicing retains the backing array; bounded queue length does not mean immediate release of its old allocation. A ring buffer or periodic compaction gives more explicit reuse. Supporting many users adds a map of limiter states and a separate idle-user cleanup policy; it does not change this per-user admission rule.
+
 
 Chapter 9 — Deduplication counters versions and scheduling
 
@@ -925,6 +1171,35 @@ Drain repeatedly pops records whose deadlines are due. A missing active ID means
 Schedule A for ten, B for five, replace A with three, and cancel B. Drain at four returns A. Drain at twenty returns nothing because the remaining records are cancelled or stale. Schedule two new tasks for the same deadline and their sequence numbers determine stable order. Old records for a reused ID cannot claim a newly scheduled task's lifetime.
 
 Like lazy TTL cleanup, this design can retain stale heap records until their deadlines arrive. State the memory cost. If Drain later runs callbacks, collect or claim work under the lock, release the lock, then execute callbacks. Define whether cancellation after claiming can stop execution. Returning IDs first keeps lifecycle logic separate from arbitrary callback behavior.
+
+Go example: claim a scheduled generation before returning it
+
+This helper handles a record already popped from a due-time heap. It is not the complete scheduler. The map stores each job's current generation, assigned freshly on scheduling or rescheduling. The caller serializes the check-and-delete sequence and invokes external work only after this helper succeeds.
+
+
+type JobRecord struct {
+    ID string
+    Due int64
+    Generation uint64
+}
+
+func ClaimJob(current map[string]uint64,
+    record JobRecord, now int64) bool {
+    if record.Due > now {
+        return false
+    }
+    generation, found := current[record.ID]
+    if !found || generation != record.Generation {
+        return false
+    }
+    delete(current, record.ID)
+    return true
+}
+
+
+After rescheduling A from generation one to three, a due record for one returns false and leaves A scheduled. A record for three at its deadline returns true and removes the claim. Calling again with that same record returns false because the current entry is gone. Cancellation uses the same absence branch.
+
+The caller must peek at the heap deadline before popping: a not-yet-due record must remain queued, even though this defensive helper would reject it. This gives at-most-one claim of a generation within this in-memory state, not exactly-once execution of an external effect. If a worker crashes after the successful claim, durable retries and idempotent effects need a larger lifecycle model.
 
 
 Chapter 10 — Recommendation and streaming ranking tasks
@@ -1021,6 +1296,39 @@ On A score eight, B nine, A ten, C nine, with B watched and k two, the canonical
 
 Expected scan cost is linear. Sorting all unique candidates costs u log u; a bounded heap costs u log k plus sorting the final k. Both versions still retain the deduplication map, so their total auxiliary memory is not merely k. A one-per-genre rule changes selection: keep each genre's best representative before global selection, provided each title belongs to exactly one genre and the objective is the sum of these supplied scores.
 
+Go example: write the ranking contract into the comparator
+
+This complete function accepts candidates that are already eligible and unique by ID. It implements the sorting baseline, preserving the caller's slice. Include import "sort" with the file's imports. The copy is shallow, which is sufficient because these fields are a string and an integer.
+
+
+type Candidate struct {
+    ID string
+    Score int64
+}
+
+func TopTitles(candidates []Candidate, k int) []Candidate {
+    if k <= 0 {
+        return nil
+    }
+    ranked := append([]Candidate(nil), candidates...)
+    sort.Slice(ranked, func(i, j int) bool {
+        a, b := ranked[i], ranked[j]
+        if a.Score != b.Score {
+            return a.Score > b.Score
+        }
+        return a.ID < b.ID
+    })
+    if k < len(ranked) {
+        ranked = ranked[:k]
+    }
+    return ranked
+}
+
+
+For input D7, A9, C7 and k two, the result is A9, C7; the input remains D7, A9, C7. The comparator uses a strict less-than relation for IDs, never less-than-or-equal. Tied scores therefore get the promised ascending ID order. Eligibility and deduplication are preconditions, not missing steps that a sort can somehow infer.
+
+Sorting u candidates costs O(u log u) comparisons and the copy uses O(u) memory. Reslicing to k does not reduce the backing array's allocation. A heap can improve selection when k is small; begin with this clear baseline so the optimized implementation has an unambiguous result to match. The sort.Slice documentation (https://pkg.go.dev/sort#Slice) defines its in-place behavior and comparator requirements.
+
 
 Chapter 11 — Modeling larger practical programs
 
@@ -1116,6 +1424,37 @@ Commit first checks that an overlay exists. Remove that overlay from the stack, 
 With base A equal to five, Begin then Set A to ten affects only the outer overlay. Begin again and Set A to twenty affects the inner one. Commit inner moves twenty into outer. Rollback outer discards it, leaving base five. If inner Delete A is committed instead, the outer overlay must contain a tombstone; merely deleting A from the overlay would reveal the original five too early.
 
 Get costs up to one map lookup per active depth. Commit work is proportional to the number of changes in the top overlay. This is a single-threaded nesting model, not an implementation of all database isolation levels. Adding concurrent transactions requires a visibility and conflict policy beyond simply putting a mutex around each method.
+
+Go example: distinguish a tombstone from no instruction
+
+This complete read operation searches transaction overlays from newest to oldest, then the base map. Each overlay maps keys to edits. A missing key, including in a nil overlay map, means that layer has no opinion; an explicit Deleted edit stops lookup. Writes and commit are separate operations described earlier.
+
+
+type Edit struct {
+    Value string
+    Deleted bool
+}
+
+func ReadLayered(base map[string]string,
+    layers []map[string]Edit, key string) (string, bool) {
+    for i := len(layers) - 1; i >= 0; i-- {
+        edit, found := layers[i][key]
+        if !found {
+            continue
+        }
+        if edit.Deleted {
+            return "", false
+        }
+        return edit.Value, true
+    }
+    value, found := base[key]
+    return value, found
+}
+
+
+For base A:1, outer A:2, and inner A:deleted, this returns missing immediately from the inner layer. Removing the inner layer reveals two. Removing both layers reveals one. Setting A to the empty string in the inner layer returns empty and true; the Deleted flag prevents that valid value from being mistaken for a tombstone.
+
+The critical distinction occurs before the value is inspected: found says whether the layer has an instruction at all. Deletion is one such instruction. With d overlays, a lookup makes at most d+1 expected constant-time map lookups, so its expected time is O(d), with constant extra space.
 
 
 Chapter 12 - Complete interview case studies
@@ -1253,6 +1592,38 @@ At time twelve, e1 falls on the excluded left boundary. Subtract four from A, le
 | 19 | 0 | 0 | No active title |
 
 At time eighteen, the event at eight is excluded; at nineteen, the event at nine is excluded. These equalities are useful tests because they expose inconsistent boundary rules between ingestion, expiration, and querying. Combining components successfully means their contracts agree, not merely that each component works in isolation.
+
+Go example: compose filtering, identity, and aggregation
+
+This complete batch aggregation core assumes positive durations, identical payloads for duplicate IDs, a positive window, and arithmetic fitting int64. Invalid-input validation belongs before this core. Input order is arbitrary. Its output is the totals map consumed by the ranking stage, not the final top-k list.
+
+
+type WatchEvent struct {
+    ID, Title string
+    At, Minutes int64
+}
+
+func RecentTotals(events []WatchEvent,
+    now, window int64) map[string]int64 {
+    seen := make(map[string]bool)
+    totals := make(map[string]int64)
+    for _, event := range events {
+        if event.At <= now-window || event.At > now {
+            continue
+        }
+        if seen[event.ID] {
+            continue
+        }
+        seen[event.ID] = true
+        totals[event.Title] += event.Minutes
+    }
+    return totals
+}
+
+
+For e1=A4 at two, e2=B6 at eight, e3=A3 at nine, and a repeated e2, querying at twelve with width ten returns A:3 and B:6. e1 is exactly on the excluded left boundary. The second e2 is ignored before aggregation, so B does not become twelve. A future event is excluded even if its ID has not appeared before.
+
+Filtering before deduplication is safe here because duplicate payloads are identical. If an ID can arrive with a corrected timestamp or duration, a canonical-version rule must precede this core. The expected work is linear in input events, with space for distinct accepted event IDs and titles. Unlike the streaming design, a new batch query rebuilds these summaries and therefore needs no inverse operation for expiration.
 
 
 Sources and scope

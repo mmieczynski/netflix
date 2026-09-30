@@ -91,3 +91,36 @@ For the baseline, collect the map values and sort using the final comparison. Re
 On A score eight, B nine, A ten, C nine, with B watched and k two, the canonical map contains A ten and C nine, so return A then C. If A and C tie, A still comes first. Test duplicate IDs, no eligible records, k larger than the result, and all equal scores. The comparison rule should give the same result regardless of map iteration order.
 
 Expected scan cost is linear. Sorting all unique candidates costs u log u; a bounded heap costs u log k plus sorting the final k. Both versions still retain the deduplication map, so their total auxiliary memory is not merely k. A one-per-genre rule changes selection: keep each genre's best representative before global selection, provided each title belongs to exactly one genre and the objective is the sum of these supplied scores.
+
+## Go example: write the ranking contract into the comparator
+
+This complete function accepts candidates that are already eligible and unique by ID. It implements the sorting baseline, preserving the caller's slice. Include `import "sort"` with the file's imports. The copy is shallow, which is sufficient because these fields are a string and an integer.
+
+```go
+type Candidate struct {
+    ID string
+    Score int64
+}
+
+func TopTitles(candidates []Candidate, k int) []Candidate {
+    if k <= 0 {
+        return nil
+    }
+    ranked := append([]Candidate(nil), candidates...)
+    sort.Slice(ranked, func(i, j int) bool {
+        a, b := ranked[i], ranked[j]
+        if a.Score != b.Score {
+            return a.Score > b.Score
+        }
+        return a.ID < b.ID
+    })
+    if k < len(ranked) {
+        ranked = ranked[:k]
+    }
+    return ranked
+}
+```
+
+For input D7, A9, C7 and k two, the result is A9, C7; the input remains D7, A9, C7. The comparator uses a strict less-than relation for IDs, never less-than-or-equal. Tied scores therefore get the promised ascending ID order. Eligibility and deduplication are preconditions, not missing steps that a sort can somehow infer.
+
+Sorting u candidates costs O(u log u) comparisons and the copy uses O(u) memory. Reslicing to k does not reduce the backing array's allocation. A heap can improve selection when k is small; begin with this clear baseline so the optimized implementation has an unambiguous result to match. The [sort.Slice documentation](https://pkg.go.dev/sort#Slice) defines its in-place behavior and comparator requirements.

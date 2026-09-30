@@ -88,3 +88,32 @@ Drain repeatedly pops records whose deadlines are due. A missing active ID means
 Schedule A for ten, B for five, replace A with three, and cancel B. Drain at four returns A. Drain at twenty returns nothing because the remaining records are cancelled or stale. Schedule two new tasks for the same deadline and their sequence numbers determine stable order. Old records for a reused ID cannot claim a newly scheduled task's lifetime.
 
 Like lazy TTL cleanup, this design can retain stale heap records until their deadlines arrive. State the memory cost. If Drain later runs callbacks, collect or claim work under the lock, release the lock, then execute callbacks. Define whether cancellation after claiming can stop execution. Returning IDs first keeps lifecycle logic separate from arbitrary callback behavior.
+
+## Go example: claim a scheduled generation before returning it
+
+This helper handles a record already popped from a due-time heap. It is not the complete scheduler. The map stores each job's current generation, assigned freshly on scheduling or rescheduling. The caller serializes the check-and-delete sequence and invokes external work only after this helper succeeds.
+
+```go
+type JobRecord struct {
+    ID string
+    Due int64
+    Generation uint64
+}
+
+func ClaimJob(current map[string]uint64,
+    record JobRecord, now int64) bool {
+    if record.Due > now {
+        return false
+    }
+    generation, found := current[record.ID]
+    if !found || generation != record.Generation {
+        return false
+    }
+    delete(current, record.ID)
+    return true
+}
+```
+
+After rescheduling A from generation one to three, a due record for one returns false and leaves A scheduled. A record for three at its deadline returns true and removes the claim. Calling again with that same record returns false because the current entry is gone. Cancellation uses the same absence branch.
+
+The caller must peek at the heap deadline before popping: a not-yet-due record must remain queued, even though this defensive helper would reject it. This gives at-most-one claim of a generation within this in-memory state, not exactly-once execution of an external effect. If a worker crashes after the successful claim, durable retries and idempotent effects need a larger lifecycle model.

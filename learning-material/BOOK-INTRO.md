@@ -2,7 +2,7 @@
 
 This is the reading edition of the Netflix L5 Go interview course. It prepares you for the first live technical interview with another senior engineer. You can read it independently on an e-reader, without an editor, a timer, or an AI conversation. The companion conversation edition teaches the same topics through short explanations, questions, feedback, and verbal program design.
 
-The book teaches through explanations, worked examples, diagrams, and state tables. The implementation discussions cover inputs, outputs, fields, helpers, branches, mutations, return values, and tests described in words. Small Go snippets illustrate language details; understanding the chapter does not depend on executing them. The PDF is not a transcript of the tutor's question bank.
+The book teaches through explanations, worked examples, diagrams, state tables, and Go code. Each chapter has an explained Go example connecting its invariant to concrete fields, branches, and mutations. Some are complete algorithms; cache, expiration, and scheduling examples isolate a core operation and explicitly state what the surrounding program supplies. You can trace the examples on the page without executing them. The PDF is not a transcript of the tutor's question bank.
 
 ## What learning an approach means
 
