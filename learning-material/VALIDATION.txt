@@ -1,0 +1,37 @@
+Validation performed 30 September 2026
+
+Reading and conversation editions
+- Reading edition: 12 chapters, 24 worked examples, 12 vector diagrams,
+  19 comparison/state tables, 11 program designs, and two complete case studies.
+- Approximately 26,397 source words; 104-page PDF in a 6 x 9 inch format.
+- Separate canonical reading Markdown and reading-index.json drive the PDF build.
+- Conversation sessions retain all 132 numbered rounds and coaching explanations.
+- Built PDF, plain text, SVG figures, and manifest successfully.
+- Checked all reading-index paths, all 12 SVG references/XML, chapter coverage,
+  example counts, nonempty PDF pages, and absence of Q&A rounds in the PDF.
+- Reviewed rendered pages and inspected all twelve figure pages at higher resolution.
+  Checked labels, monochrome contrast, captions, table layout, and code-block breaks.
+- Original plan.md and learner progress preserved. No editor or timed work required.
+- Tutor guidance retrieves either edition appropriately and adapts visuals for speech.
+- Go references unchanged by this reading-edition revision; no Go tests rerun.
+
+Optional Go references (validated before the book-format revision)
+- Tested using the official Go 1.27.1 Windows amd64 portable archive.
+- Archive SHA256 checked against go.dev release metadata before extraction.
+- Toolchain placed in the system temp directory, not installed on PATH.
+- gofmt applied to all Go sources.
+- go test ./... -count=1 -cover passed: 95.2% statement coverage.
+- go vet ./... passed.
+- Tests include brute-force comparisons, an independent LRU model,
+  expiry generations, exact window boundaries, ranking against full sorting,
+  and concurrent cache and admission operations.
+- Race-detector execution was unavailable because the required CGO/C toolchain
+  was missing. Concurrent tests without instrumentation do not prove race safety.
+
+Boundaries
+- Original educational exercises are not confirmed Netflix interview questions.
+- No fixed reading or conversation duration is promised.
+- The book teaches reasoning; spoken work does not establish Go syntax fluency.
+- Remote repository access and write capability depend on the actual connection.
+  Repository guidance requires the tutor to read material and report access honestly.
+- Changes have not been pushed to GitHub by this authoring task.

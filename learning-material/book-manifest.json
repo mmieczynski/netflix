@@ -1,0 +1,28 @@
+{
+  "edition": "reading",
+  "chapters": 12,
+  "worked_examples": 24,
+  "vector_figures": 12,
+  "conversation_questions_in_separate_sessions": 132,
+  "worked_program_designs": 11,
+  "complete_case_studies": 2,
+  "source_words_approx": 26397,
+  "pdf_pages": 104,
+  "pdf_bytes": 339815,
+  "source_files": [
+    "learning-material/BOOK-INTRO.md",
+    "learning-material/reading/01-go.md",
+    "learning-material/reading/02-patterns.md",
+    "learning-material/reading/03-order.md",
+    "learning-material/reading/04-graphs.md",
+    "learning-material/reading/05-states.md",
+    "learning-material/reading/06-cache.md",
+    "learning-material/reading/07-time.md",
+    "learning-material/reading/08-limits.md",
+    "learning-material/reading/09-events.md",
+    "learning-material/reading/10-recommend.md",
+    "learning-material/reading/11-practical.md",
+    "learning-material/reading/12-case-studies.md",
+    "learning-material/SOURCES.md"
+  ]
+}

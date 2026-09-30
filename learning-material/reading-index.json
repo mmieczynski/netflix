@@ -1,0 +1,62 @@
+[
+  {
+    "chapter": 1,
+    "title": "Go and data structure choices",
+    "path": "reading/01-go.md"
+  },
+  {
+    "chapter": 2,
+    "title": "Hashing arrays and sliding windows",
+    "path": "reading/02-patterns.md"
+  },
+  {
+    "chapter": 3,
+    "title": "Sorting binary search intervals and heaps",
+    "path": "reading/03-order.md"
+  },
+  {
+    "chapter": 4,
+    "title": "Trees graphs and dependencies",
+    "path": "reading/04-graphs.md"
+  },
+  {
+    "chapter": 5,
+    "title": "Stacks greedy choices and dynamic programming",
+    "path": "reading/05-states.md"
+  },
+  {
+    "chapter": 6,
+    "title": "LRU and weighted caches",
+    "path": "reading/06-cache.md"
+  },
+  {
+    "chapter": 7,
+    "title": "Expiration clocks and concurrency",
+    "path": "reading/07-time.md"
+  },
+  {
+    "chapter": 8,
+    "title": "Rate limiting and rolling windows",
+    "path": "reading/08-limits.md"
+  },
+  {
+    "chapter": 9,
+    "title": "Deduplication counters versions and scheduling",
+    "path": "reading/09-events.md"
+  },
+  {
+    "chapter": 10,
+    "title": "Recommendation and streaming ranking tasks",
+    "path": "reading/10-recommend.md"
+  },
+  {
+    "chapter": 11,
+    "title": "Modeling larger practical programs",
+    "path": "reading/11-practical.md"
+  },
+  {
+    "chapter": 12,
+    "title": "Complete interview case studies",
+    "path": "reading/12-case-studies.md"
+  }
+]

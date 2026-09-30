@@ -1,0 +1,109 @@
+[
+  {
+    "session": "01",
+    "title": "Go and data structure choices",
+    "path": "sessions/01-go.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "02",
+    "title": "Hashing arrays and sliding windows",
+    "path": "sessions/02-patterns.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "03",
+    "title": "Sorting binary search intervals and heaps",
+    "path": "sessions/03-order.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "04",
+    "title": "Trees graphs and dependencies",
+    "path": "sessions/04-graphs.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "05",
+    "title": "Stacks greedy choices and dynamic programming",
+    "path": "sessions/05-states.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "06",
+    "title": "LRU and weighted caches",
+    "path": "sessions/06-cache.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "07",
+    "title": "Expiration clocks and concurrency",
+    "path": "sessions/07-time.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "08",
+    "title": "Rate limiting and rolling windows",
+    "path": "sessions/08-limits.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "09",
+    "title": "Deduplication counters versions and scheduling",
+    "path": "sessions/09-events.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "10",
+    "title": "Recommendation and streaming ranking tasks",
+    "path": "sessions/10-recommend.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "11",
+    "title": "Modeling larger practical programs",
+    "path": "sessions/11-practical.md",
+    "dialogue_rounds": 12,
+    "editor_required": false,
+    "format": "self-contained chapter with worked answers and program design",
+    "requires_computer": false
+  },
+  {
+    "session": "12",
+    "title": "Complete interview case studies",
+    "path": "sessions/12-case-studies.md",
+    "format": "two complete worked cases, also usable as oral mocks",
+    "requires_computer": false,
+    "editor_required": false
+  }
+]
