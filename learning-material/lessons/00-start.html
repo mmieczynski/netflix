@@ -1,0 +1,39 @@
+<section id="start" data-minutes="30" data-title="Start here and interview method">
+<h1>Netflix L5 live coding preparation in Go</h1>
+<p class="lead">A 14 hour course for reasoning through unfamiliar coding problems, explaining decisions to another senior engineer, and adapting when requirements change.</p>
+<p>This course assumes basic programming experience and focuses on your first technical interview through CodeSignal. It does not assume a particular Netflix team or a guaranteed question list. Your original plan gives caches and rate limiting extra weight; this course adds enough algorithms to avoid preparing for only one kind of problem. Recommendation exercises are small programs with explicit contracts, rather than an ML system design syllabus.</p>
+<h2>How to spend the 14 hours</h2>
+<p>The estimates include reading or listening, thinking aloud, implementing, testing, and reviewing. Reading every page without doing the exercises will take much less time and will not provide the same preparation. Use each lesson's time box. Stop when it expires, record what was difficult, and revisit that skill later. Optional extensions are outside the 14 hour route.</p>
+<table><thead><tr><th>Lesson</th><th>Minutes</th><th>Main outcome</th></tr></thead><tbody>
+<tr><td>0. Interview method</td><td>30</td><td>Clarify, model, prove, implement, test</td></tr>
+<tr><td>1. Go and data structures</td><td>55</td><td>Choose representations by required operations</td></tr>
+<tr><td>2. Hashing and windows</td><td>65</td><td>Replace repeated work with maintained state</td></tr>
+<tr><td>3. Ordering and selection</td><td>70</td><td>Sort, search, merge, select with a heap</td></tr>
+<tr><td>4. Trees and graphs</td><td>65</td><td>Traverse safely and detect dependencies</td></tr>
+<tr><td>5. Stacks and state spaces</td><td>60</td><td>Recognize greedy, backtracking, and DP choices</td></tr>
+<tr><td>6. LRU and weighted caches</td><td>80</td><td>Maintain multiple related invariants</td></tr>
+<tr><td>7. TTL and concurrency</td><td>85</td><td>Make time and concurrent mutation explicit</td></tr>
+<tr><td>8. Rate limiting</td><td>65</td><td>Implement exact and burst based policies</td></tr>
+<tr><td>9. Events and temporal services</td><td>65</td><td>Reuse queues, heaps, and version checks</td></tr>
+<tr><td>10. Recommendations</td><td>55</td><td>Filter, score, rank, and diversify</td></tr>
+<tr><td>11. Larger practical programs</td><td>35</td><td>Model API behavior before building it</td></tr>
+<tr><td>12. Two live mocks and review</td><td>110</td><td>Integrate reasoning and implementation</td></tr>
+</tbody></table>
+<p>For seven study sessions, pair lessons 0 and 1, then 2 and 3, then 4 and 5, then 6 and 7, then 8 and 9, then 10 and 11, and finish with the mocks. The cache session is longer; split it if concentration falls. Begin later sessions with five minutes of recall from an earlier topic, using time from that session's review allocation.</p>
+<h2>The interview loop to practise</h2>
+<p>First restate the observable behavior. “For each user, I need to accept at most three requests in the preceding ten seconds, excluding the left boundary.” Ask about ambiguous inputs that change the algorithm: sorted arrival, duplicate IDs, concurrency, capacity, and return values. Avoid spending ten minutes collecting hypothetical requirements.</p>
+<p>Next give a correct baseline. A scan can be a useful first version. Identify its expensive operation, then select a structure that makes that operation cheaper. Say the invariant before writing the implementation. An invariant is a claim that is true before and after every public operation: for example, every live cache key has exactly one node in both the map and the recency list.</p>
+<p>Walk one tiny example manually. Implement a vertical slice that runs. Test the example, an empty input, an exact boundary, and a case that defeats your first idea. Explain time and space using meaningful variables. “Each request is appended once and removed once” is stronger reasoning than merely saying “linear.” Finish with the next requirement and what would actually change.</p>
+<p>A suggested 50 minute rehearsal budget is five minutes to clarify and model, five to discuss the baseline and improvement, twenty five to implement, ten to test, and five for a follow-up. This is a practice schedule, not a claim about Netflix's interview duration. If your invitation gives another duration, scale it. In a live session, tell the interviewer when you need a minute to think and return with a concrete hypothesis.</p>
+<div class="checkpoint"><strong>Think aloud.</strong> A prompt says, “Build a cache.” Name three questions that change the representation and one question you can defer. Explain why each matters.</div>
+<details><summary>Coach notes</summary><p>Capacity policy, expiration policy, and required operations or concurrency can change the design. Whether values are strings or movie metadata often does not change the first design. A good answer connects each question to a decision, rather than reciting a requirements checklist.</p></details>
+<h2>Reading and listening</h2>
+<p>Start with the lesson, then code in a blank file. The <a href="START-HERE.txt">quick-start guide</a> explains the file layout. After an attempt, inspect the runnable references: <a href="algorithms.go">algorithms.go</a>, <a href="cache.go">cache.go</a>, and <a href="services.go">services.go</a>. Their corresponding test files contain boundary cases and comparisons against simpler models. These are learning examples, with assumptions and limitations documented in the code.</p>
+<p>Every concept has prose that can stand without the code. Listen pauses at “Think aloud” checkpoints. Speak your answer before pressing Continue; reveal the coach notes afterward if needed. Code blocks are for the later hands-on part and are skipped by narration. Browser speech uses the voices available on your machine; voice quality and offline availability depend on the voice.</p>
+<p>For an actual conversation, copy the AI tutor prompt for the current lesson into an AI tool that supports voice. It supplies the lesson and tells the tutor to ask one question at a time, challenge your assumptions, and withhold solutions until you have tried. The local reader has narration and reflection checkpoints; it has no embedded AI service or microphone recording.</p>
+<h2>What the research can establish</h2>
+<p>CodeSignal distinguishes live interviewing from assessments and offers practice to familiarize yourself with its environment. That does not establish the question type, timer, or allowed resources for your particular interview. Practise in the environment linked from your invitation and confirm the Go runtime there. <a href="https://support.codesignal.com/hc/en-us/articles/360045985453-Conducting-an-interview-in-CodeSignal">CodeSignal live interview documentation</a>; <a href="https://support.codesignal.com/hc/en-us/articles/12984563824279-Practice-Content-Overview">practice overview</a>.</p>
+<p>Public Netflix interview reports vary and many search results are promotional or secondhand. No official role-specific first-round question list was established in this research. Therefore the priorities here are a preparation judgment based on your plan and the transferable skills needed for live coding, not measured probabilities. The Sources lesson separates platform facts, company context, and our original practice material.</p>
+<h2>Your first 30 minutes</h2>
+<p>Spend ten minutes with this orientation, ten explaining a map based duplicate detector without code, and ten writing it in Go. Return the first repeated ID and a boolean. Test an empty list, two adjacent duplicates, a duplicate far apart, and no duplicate. If syntax blocks you, spend extra time in lesson 1. If the code is easy but explaining why it works is hard, keep every later speaking checkpoint.</p>
+</section>

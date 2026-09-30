@@ -1,0 +1,43 @@
+<section id="go" data-minutes="55" data-title="Go and data structure choices">
+<h1>Go and data structure choices</h1>
+<p class="lead">Choose a structure by the operations you need to make cheap. The story around the data is secondary.</p>
+<h2>From requirements to representation</h2>
+<p>Imagine a list of recently watched movies. If you only append and iterate, a slice is a natural fit. If you repeatedly ask whether a particular movie has been watched, add a set. If you must remove the least recently accessed movie while promoting arbitrary movies on access, a slice alone makes each promotion expensive. A map plus a doubly linked list answers both identity and recency questions.</p>
+<p>A slice gives constant time indexed access and amortized constant time append. Amortized means a sequence of appends has linear total work even though an individual append may allocate and copy the entire backing array. Inserting or deleting in the middle generally shifts elements and costs linear time. A map gives expected constant time lookup, insertion, and deletion; it does not preserve order. Include key hashing cost when keys themselves are long strings.</p>
+<p>A stack removes the newest item. Use it for unfinished nested work, depth first traversal, and undo. A queue removes the oldest item. Use it for breadth first traversal or chronological expiration when arrival and expiration order agree. A heap exposes the smallest or largest priority cheaply but does not keep every element globally sorted. A balanced search tree supports ordered updates and predecessor queries; a sorted slice gives simpler binary search when updates can be appended or are infrequent. Go's standard library does not provide a general ordered map.</p>
+<table><thead><tr><th>Need</th><th>First candidate</th><th>What it does not solve</th></tr></thead><tbody>
+<tr><td>Membership or key lookup</td><td>Map or set</td><td>Sorted order, oldest item</td></tr>
+<tr><td>Process in arrival order</td><td>Queue with head index</td><td>Out of order deadlines</td></tr>
+<tr><td>Next minimum repeatedly</td><td>Min heap</td><td>Arbitrary key lookup without an index</td></tr>
+<tr><td>Most recent and least recent</td><td>Doubly linked list plus map</td><td>Earliest expiration</td></tr>
+<tr><td>Latest version before a time</td><td>Sorted slice per key</td><td>Cheap arbitrary historical insertion</td></tr>
+<tr><td>Connections and dependencies</td><td>Adjacency list</td><td>Implicit cycle protection</td></tr>
+<tr><td>Prefix lookup</td><td>Trie, or sorted strings plus search</td><td>Low memory automatically</td></tr>
+</tbody></table>
+<p>For listening: identity suggests a map; arrival order suggests a queue; smallest priority suggests a heap; arbitrary recency changes suggest a map and linked list. These are starting hypotheses. The contract and workload decide whether they are appropriate.</p>
+<h2>Go mechanics that prevent interview bugs</h2>
+<p>Initialize a map before assigning into it. Reading a missing key yields the value type's zero value, so use the second boolean result when zero is a valid stored value. A set is often a map from keys to empty structs. Map iteration order is unspecified; sort extracted keys when the result must be deterministic. These rules are documented in the <a href="https://go.dev/ref/spec#Map_types">Go specification</a>.</p>
+<pre><code>seen := make(map[string]struct{})
+seen["movie-1"] = struct{}{}
+_, exists := seen["movie-1"]
+delete(seen, "movie-1")
+_ = exists
+
+queue := []int{0}
+for head := 0; head &lt; len(queue); head++ {
+    node := queue[head]
+    _ = node // append newly discovered nodes here
+}</code></pre>
+<p>A slice is a view over an array. Copying the slice value does not copy the elements; an in-place sort can change the caller's data. Use an explicit copy when your contract promises preservation. Reslicing a long-lived queue may retain its backing array. Clear pointer slots when discarding values and occasionally compact or use a ring buffer for bounded services. A short interview traversal with integer IDs rarely needs elaborate memory reclamation.</p>
+<p>A string is bytes. Indexing returns a byte; ranging decodes runes, and the range index is a byte offset. If the task defines characters as Unicode code points, convert to a rune slice or maintain rune positions carefully. A rune still is not necessarily a human-perceived character: combining marks and emoji sequences can contain multiple runes. Clarify the required unit. ASCII-only tasks can use byte arrays for speed and simplicity. <a href="https://go.dev/blog/strings">Go strings, bytes, runes and characters</a>.</p>
+<p>Use explicit integer widths where constraints demand them. Durations and timestamps in our exercises use integer ticks, and sums that could exceed 32 bits use int64. Ask whether multiplication can overflow. Avoid sentinel values such as minus one if they are legitimate data; return a value and a boolean. Return an error for invalid input when the prompt expects validation, rather than inventing a successful result.</p>
+<div class="checkpoint"><strong>Think aloud.</strong> You store watch events in a map from movie ID to duration. What information has been lost? What changes if the task asks for the last ten events rather than total watch time?</div>
+<details><summary>Coach notes</summary><p>A single value per movie loses event multiplicity and ordering unless the value itself stores a history. Totals need accumulation; the last ten events need chronological records. The correct key is determined by the query, not merely by an available ID.</p></details>
+<h2>Complexity is a budget explanation</h2>
+<p>Let n be events, u distinct users, and k returned results. Say which one your bound uses. A map of queues can hold up to u times a per-user limit, not merely the limit. Sorting n records is typically O(n log n); scanning every user's queue for one request adds work proportional to all users. Space includes maps, queued stale entries, recursion depth, and output. Distinguish auxiliary space from output space.</p>
+<p>To justify an optimization, identify repeated work. If every lookup scans all records, an index removes that repeated scan. If every iteration sorts everything just to find the next minimum, a heap maintains enough ordering. If every recursive branch recomputes the same remaining problem, memoization reuses answers. Understanding the saved work is more durable than memorizing names.</p>
+<h2>Practice for 55 minutes</h2>
+<p>Locally, run <code>go test ./...</code> from the learning-material directory to compile and execute the provided tests, and <code>go vet ./...</code> for static checks. On this Windows workspace, <code>.\RUN-TESTS.ps1</code> also locates the temporary Go toolchain used to validate the course if Go is not on PATH. A CodeSignal prompt may expect only a function rather than a whole module; adapt to its supplied template. <a href="https://pkg.go.dev/cmd/go#hdr-Test_packages">Go test documentation</a>.</p>
+<p>Use fifteen minutes for the lesson and speaking, twenty five for three short functions, and fifteen to test and explain. Implement first repeated ID; a queue-driven traversal over a tiny adjacency list; and frequency counts returned in sorted key order. For each, state missing-key behavior, input mutation, and complexity. Then change duplicate detection to preserve the first appearance of every unique ID. A set determines membership, but a slice must preserve output order.</p>
+<details><summary>Exit check</summary><p>You are ready when you can explain why a map alone cannot implement LRU order, why a heap is not a sorted array, and why two slice variables can observe the same mutation. Reference Go implementations later in the course use only the standard library and no recent language shortcuts.</p></details>
+</section>

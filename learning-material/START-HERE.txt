@@ -1,0 +1,28 @@
+Netflix L5 live coding preparation in Go
+
+Open course.html in your browser. No server or installation is required.
+The core route is 14 hours including discussion, coding, and two mock interviews.
+
+Read: choose a lesson in the navigation. Hints and answers stay closed until you open them.
+Listen: select a voice and press Listen. Narration skips code and hidden answers,
+and stops at each Think aloud checkpoint. Press Continue after answering.
+Discuss with AI: use Copy AI tutor prompt, then paste it into a voice-capable
+AI conversation. It includes the selected lesson and instructions for dialogue.
+The local page does not itself connect to an AI or record your microphone.
+
+Go practice: use a scratch directory for your attempts before opening the solutions.
+Reference implementations are in algorithms.go, cache.go, services.go.
+On this Windows machine, RUN-TESTS.ps1 also finds the temporary Go toolchain
+used for validation if Go is not installed on PATH. That temporary copy may
+eventually be removed by system cleanup; the course itself needs no Go installation.
+From this directory, with Go installed:
+  go test ./...
+  go vet ./...
+  go test -race ./...
+The race detector requires a supported toolchain; on Windows it may require a C compiler.
+
+The source lessons live in lessons/. To rebuild the standalone reader:
+  python build.py
+
+plan.md is the original input plan and has not been changed.
+Research checked 30 September 2026. See the Sources lesson for evidence and limits.
