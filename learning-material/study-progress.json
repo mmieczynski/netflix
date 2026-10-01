@@ -1,19 +1,37 @@
 {
   "schema_version": 1,
   "course_version": "offline-book-v3",
-  "status": "not_started",
-  "current_session": null,
-  "current_round": null,
-  "next_action": "Begin session 01 with a short explanation of choosing data structures by required operations, then ask one diagnostic question.",
-  "awaiting_answer_to": null,
+  "status": "in_progress",
+  "current_session": 1,
+  "current_round": 2,
+  "next_action": "Continue Session 01 linearly with Round 2: distinguish membership state from ordered event history, then proceed through all remaining rounds before any diversion.",
+  "awaiting_answer_to": "After events A, B, A, if the query is which two events happened most recently, what state would you keep and what are the two most recent events?",
   "preferences": {
     "mode": "conversation",
     "editor_required": false,
     "interface": "ChatGPT conversation with access to the remote GitHub repository",
     "interview": "Netflix L5 live technical interview in Go with a senior engineer",
-    "independent_reading": "self-contained PDF or repository chapters without a computer"
+    "independent_reading": "self-contained PDF or repository chapters without a computer",
+    "session_flow": "Complete the current session fully and in order before diverting to side topics."
   },
-  "sessions": {},
+  "sessions": {
+    "01": {
+      "rounds_attempted": [
+        1
+      ],
+      "rounds_passed_independently": [
+        1
+      ],
+      "observed_successes": [
+        "Selected a Go map for membership-by-ID and explained that the ID can be used as the key.",
+        "Selected a queue for processing in arrival order and identified enqueue/dequeue behavior.",
+        "After a heap explanation, correctly predicted that a min-heap containing priorities 5, 2, 8, 1 pops 1 first."
+      ],
+      "unresolved_concepts": [
+        "Continue the full representation sequence, including ordered event history, indexing invariants, amortized append, map zero-value ambiguity, slice ownership, Unicode units, queue memory, heap lookup limitations, memory bounds, and multi-structure consistency."
+      ]
+    }
+  },
   "review_queue": [],
   "error_log": [],
   "notes": [
