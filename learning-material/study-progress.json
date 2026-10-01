@@ -3,8 +3,8 @@
   "course_version": "offline-book-v3",
   "status": "in_progress",
   "current_session": 1,
-  "current_round": 4,
-  "next_action": "Resume the numbered Session 01 sequence at Round 4: a map stores each movie's slice position; delete the first record by shifting left and explain what must be updated to keep lookup correct.",
+  "current_round": 7,
+  "next_action": "Continue Session 01 with Round 7: explain why passing a slice by value can still let an in-place sort mutate the caller's data, and when to copy.",
   "awaiting_answer_to": null,
   "preferences": {
     "mode": "conversation",
@@ -19,12 +19,17 @@
       "rounds_attempted": [
         1,
         2,
-        3
+        3,
+        4,
+        5,
+        6
       ],
       "rounds_passed_independently": [
         1,
         2,
-        3
+        3,
+        4,
+        5
       ],
       "observed_successes": [
         "Selected a Go map/set for membership-by-ID and explained that the ID is the lookup key.",
@@ -34,13 +39,11 @@
         "Extracted operations from a priority-task prompt as insert plus get-highest-priority and selected a heap.",
         "Understood the distinction between map+doubly-linked-list for known-position moves such as move-to-front and heap+ID-index for priority-driven reordering.",
         "Understood that arbitrary heap-item lookup is supplied by the auxiliary map, while the heap provides O(log n) order repair along a parent-child path.",
-        "Understood the binary-heap array representation and parent/child index relationships conceptually."
+        "Understood the binary-heap array representation and parent/child index relationships conceptually.",
+        "Recognized that deleting from an indexed slice invalidates stored positions, and proposed a map-to-linked-list-node alternative plus the swap-with-last optimization when order does not matter.",
+        "Explained why slice append is amortized O(1): most appends are cheap, while occasional resize-and-copy costs are spread across many appends."
       ],
       "unresolved_concepts": [
-        "Continue the official numbered sequence from Round 4 onward.",
-        "Round 4: maintaining a map from ID to slice position after deletions/shifts.",
-        "Round 5: why slice append is amortized O(1).",
-        "Round 6: distinguishing a missing map entry from a legitimate zero value.",
         "Round 7: slice backing-array aliasing and ownership.",
         "Round 8: bytes versus runes versus user-perceived characters.",
         "Round 9: queue head index and retained-memory tradeoffs.",
@@ -51,7 +54,8 @@
       ],
       "prompted_successes": [
         "After explanation, understood why a fixed-capacity circular buffer may still need logical-size tracking depending on slice initialization.",
-        "After clarification, distinguished the linked-list O(1) node lookup/removal from the O(n) search for a new sorted-by-priority insertion position."
+        "After clarification, distinguished the linked-list O(1) node lookup/removal from the O(n) search for a new sorted-by-priority insertion position.",
+        "After explanation, understood Go's comma-ok map lookup and that missing keys return the zero value with ok=false."
       ]
     }
   },
