@@ -3,9 +3,9 @@
   "course_version": "offline-book-v3",
   "status": "in_progress",
   "current_session": 1,
-  "current_round": 10,
-  "next_action": "Continue Session 01 with Round 10: identify a min-heap as a candidate for repeatedly retrieving the smallest deadline, and name the query it handles poorly without an auxiliary index.",
-  "awaiting_answer_to": "You repeatedly need the smallest deadline next, but also sometimes need to find a task by arbitrary ID. Which part does a min-heap solve well, and which part does it not solve well by itself?",
+  "current_round": 11,
+  "next_action": "Continue Session 01 with Round 11: reason about the memory bound of a map from users to per-user queues and distinguish per-user capacity from total retained elements.",
+  "awaiting_answer_to": "Suppose you have 1,000 users and each user's queue can hold at most 100 timestamps. What is the maximum number of timestamps the whole system can retain, and why is that different from a single queue of size 100?",
   "preferences": {
     "mode": "conversation",
     "editor_required": false,
@@ -25,7 +25,8 @@
         6,
         7,
         8,
-        9
+        9,
+        10
       ],
       "rounds_passed_independently": [
         1,
@@ -33,7 +34,8 @@
         3,
         4,
         5,
-        8
+        8,
+        10
       ],
       "observed_successes": [
         "Selected a Go map/set for membership-by-ID and explained that the ID is the lookup key.",
@@ -46,10 +48,10 @@
         "Understood the binary-heap array representation and parent/child index relationships conceptually.",
         "Recognized that deleting from an indexed slice invalidates stored positions, and proposed a map-to-linked-list-node alternative plus the swap-with-last optimization when order does not matter.",
         "Explained why slice append is amortized O(1): most appends are cheap, while occasional resize-and-copy costs are spread across many appends.",
-        "Correctly identified that Go len(s) counts bytes rather than Unicode code points and clarified the distinction between bytes, code points/runes, and user-perceived characters."
+        "Correctly identified that Go len(s) counts bytes rather than Unicode code points and clarified the distinction between bytes, code points/runes, and user-perceived characters.",
+        "Correctly explained that a min-heap efficiently returns the task with the smallest deadline but does not efficiently find an arbitrary task by ID without an auxiliary index."
       ],
       "unresolved_concepts": [
-        "Round 10: heap strengths and arbitrary-ID lookup limitations; related concepts were discussed earlier and now need the official transfer check.",
         "Round 11: memory bounds for map-of-queues.",
         "Round 12: combine structures from operations and explain consistency obligations.",
         "Finish the spoken event-registry program design after the numbered rounds."
