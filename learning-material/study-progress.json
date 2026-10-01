@@ -3,9 +3,9 @@
   "course_version": "offline-book-v3",
   "status": "in_progress",
   "current_session": 1,
-  "current_round": 2,
-  "next_action": "Continue Session 01 linearly with Round 2: distinguish membership state from ordered event history, then proceed through all remaining rounds before any diversion.",
-  "awaiting_answer_to": "After events A, B, A, if the query is which two events happened most recently, what state would you keep and what are the two most recent events?",
+  "current_round": 4,
+  "next_action": "Resume the numbered Session 01 sequence at Round 4: a map stores each movie's slice position; delete the first record by shifting left and explain what must be updated to keep lookup correct.",
+  "awaiting_answer_to": null,
   "preferences": {
     "mode": "conversation",
     "editor_required": false,
@@ -17,24 +17,49 @@
   "sessions": {
     "01": {
       "rounds_attempted": [
-        1
+        1,
+        2,
+        3
       ],
       "rounds_passed_independently": [
-        1
+        1,
+        2,
+        3
       ],
       "observed_successes": [
-        "Selected a Go map for membership-by-ID and explained that the ID can be used as the key.",
-        "Selected a queue for processing in arrival order and identified enqueue/dequeue behavior.",
-        "After a heap explanation, correctly predicted that a min-heap containing priorities 5, 2, 8, 1 pops 1 first."
+        "Selected a Go map/set for membership-by-ID and explained that the ID is the lookup key.",
+        "Recognized that last-N event queries need ordered occurrences, including duplicates; proposed a queue/bounded slice for A, B, A and correctly identified B, A as the last two.",
+        "Worked through bounded-slice versus circular-buffer tradeoffs and understood that a ring buffer avoids O(k) shifting by overwriting at a wrapped index.",
+        "Explained that a linear scan is acceptable when the collection is tiny, lookups are infrequent, or all items must be scanned anyway.",
+        "Extracted operations from a priority-task prompt as insert plus get-highest-priority and selected a heap.",
+        "Understood the distinction between map+doubly-linked-list for known-position moves such as move-to-front and heap+ID-index for priority-driven reordering.",
+        "Understood that arbitrary heap-item lookup is supplied by the auxiliary map, while the heap provides O(log n) order repair along a parent-child path.",
+        "Understood the binary-heap array representation and parent/child index relationships conceptually."
       ],
       "unresolved_concepts": [
-        "Continue the full representation sequence, including ordered event history, indexing invariants, amortized append, map zero-value ambiguity, slice ownership, Unicode units, queue memory, heap lookup limitations, memory bounds, and multi-structure consistency."
+        "Continue the official numbered sequence from Round 4 onward.",
+        "Round 4: maintaining a map from ID to slice position after deletions/shifts.",
+        "Round 5: why slice append is amortized O(1).",
+        "Round 6: distinguishing a missing map entry from a legitimate zero value.",
+        "Round 7: slice backing-array aliasing and ownership.",
+        "Round 8: bytes versus runes versus user-perceived characters.",
+        "Round 9: queue head index and retained-memory tradeoffs.",
+        "Round 10: heap strengths and arbitrary-ID lookup limitations; related concepts were discussed but the official transfer round is not yet passed.",
+        "Round 11: memory bounds for map-of-queues.",
+        "Round 12: combine structures from operations and explain consistency obligations.",
+        "Finish the spoken event-registry program design after the numbered rounds."
+      ],
+      "prompted_successes": [
+        "After explanation, understood why a fixed-capacity circular buffer may still need logical-size tracking depending on slice initialization.",
+        "After clarification, distinguished the linked-list O(1) node lookup/removal from the O(n) search for a new sorted-by-priority insertion position."
       ]
     }
   },
-  "review_queue": [],
+  "review_queue": [
+    "Briefly revisit why heap+map and map+doubly-linked-list both use a map for O(1) identity lookup, but differ in how they restore ordering."
+  ],
   "error_log": [],
   "notes": [
-    "Material preparation is not evidence of learner progress. No learning session has been completed yet."
+    "Session 01 is in progress. Rounds 1-3 are complete. Additional heap, circular-buffer, and linked-list material was discussed ahead of the numbered sequence but is not counted as passing later official rounds."
   ]
 }
