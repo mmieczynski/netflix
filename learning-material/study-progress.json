@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "course_version": "offline-book-v3",
-  "status": "in_progress",
+  "status": "paused",
   "current_session": 1,
   "current_round": 12,
-  "next_action": "Do the Session 01 mastery check: give a short explanation of how workload, ordering, identity, and ownership affect representation choices. Then continue to the spoken event-registry program design.",
-  "awaiting_answer_to": "In your own words, explain how workload, ordering, identity, and ownership influence which data structure or combination of structures you choose.",
+  "next_action": "Resume Session 01 at Round 12: finish the teach-back on combining structures for undo plus document lookup, then do the one-minute representation summary and the spoken event-registry program design.",
+  "awaiting_answer_to": null,
   "preferences": {
     "mode": "conversation",
     "editor_required": false,
@@ -53,11 +53,14 @@
         "Explained why slice append is amortized O(1): most appends are cheap, while occasional resize-and-copy costs are spread across many appends.",
         "Correctly identified that Go len(s) counts bytes rather than Unicode code points and clarified the distinction between bytes, code points/runes, and user-perceived characters.",
         "Correctly explained that a min-heap efficiently returns the task with the smallest deadline but does not efficiently find an arbitrary task by ID without an auxiliary index.",
-        "Correctly computed that 1,000 users with up to 100 timestamps each can retain up to 100,000 timestamps, recognizing that per-user capacity is not the total memory bound."
+        "Correctly computed that 1,000 users with up to 100 timestamps each can retain up to 100,000 timestamps, recognizing that per-user capacity is not the total memory bound.",
+        "Correctly reasoned that total retained timestamps in a map of per-user queues scale as users times per-user capacity.",
+        "Proposed a valid alternative undo design where a map points from document ID to the latest version while the version history stores the actual document contents."
       ],
       "unresolved_concepts": [
-        "Complete the Session 01 mastery explanation covering workload, ordering, identity, and ownership.",
-        "Complete the spoken event-registry program design after the numbered rounds."
+        "Finish Round 12 teach-back: explicitly name the operations, structures, and consistency obligations for undo plus document lookup.",
+        "Give the one-minute summary of how workload, ordering, identity, and ownership affect representation.",
+        "Complete the spoken event-registry program design."
       ],
       "prompted_successes": [
         "After explanation, understood why a fixed-capacity circular buffer may still need logical-size tracking depending on slice initialization.",
@@ -65,7 +68,8 @@
         "After explanation, understood Go's comma-ok map lookup and that missing keys return the zero value with ok=false.",
         "After explanation, understood that passing a slice by value copies the slice header while sharing the backing array, and that cloning/copying elements creates isolation.",
         "After the retained-memory issue was explained, proposed a fixed-size circular buffer with wraparound head movement as a bounded-queue solution.",
-        "After correction, understood that the undo stack represents history while the map represents current document state, and that undo must keep those two representations consistent."
+        "After correction, understood that the undo stack represents history while the map represents current document state, and that undo must keep those two representations consistent.",
+        "After discussion, distinguished the conventional current-state map plus command stack design from a map-to-version-history design and understood the consistency requirements of each."
       ]
     }
   },
@@ -74,6 +78,7 @@
   ],
   "error_log": [],
   "notes": [
-    "Session 01 is in progress. Rounds 1-3 are complete. Additional heap, circular-buffer, and linked-list material was discussed ahead of the numbered sequence but is not counted as passing later official rounds."
+    "Session 01 is in progress. Rounds 1-3 are complete. Additional heap, circular-buffer, and linked-list material was discussed ahead of the numbered sequence but is not counted as passing later official rounds.",
+    "Paused during Session 01 Round 12 after comparing undo designs. Key insight: a map can point to current document state or to the latest version node; the history structure may store commands or full versions, depending on semantics and memory tradeoffs. Next: finish Round 12, summarize representation choices, then do the event-registry design."
   ]
 }
