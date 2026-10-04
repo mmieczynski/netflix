@@ -3,8 +3,8 @@
   "course_version": "offline-book-v3",
   "status": "paused",
   "current_session": 1,
-  "current_round": 12,
-  "next_action": "Resume Session 01 at Round 12: finish the teach-back on combining structures for undo plus document lookup, then do the one-minute representation summary and the spoken event-registry program design.",
+  "current_round": 13,
+  "next_action": "Resume Session 01 at Round 13. Round 12 and the spoken event-registry design are complete through concurrency: map plus ordered structure, bounded capacity, remove-by-ID tradeoffs, recent(n), and sync.RWMutex for concurrent readers/writers.",
   "awaiting_answer_to": null,
   "preferences": {
     "mode": "conversation",
@@ -16,30 +16,8 @@
   },
   "sessions": {
     "01": {
-      "rounds_attempted": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12
-      ],
-      "rounds_passed_independently": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        8,
-        10,
-        11
-      ],
+      "rounds_attempted": [1,2,3,4,5,6,7,8,9,10,11,12],
+      "rounds_passed_independently": [1,2,3,4,5,8,10,11,12],
       "observed_successes": [
         "Selected a Go map/set for membership-by-ID and explained that the ID is the lookup key.",
         "Recognized that last-N event queries need ordered occurrences, including duplicates; proposed a queue/bounded slice for A, B, A and correctly identified B, A as the last two.",
@@ -55,13 +33,16 @@
         "Correctly explained that a min-heap efficiently returns the task with the smallest deadline but does not efficiently find an arbitrary task by ID without an auxiliary index.",
         "Correctly computed that 1,000 users with up to 100 timestamps each can retain up to 100,000 timestamps, recognizing that per-user capacity is not the total memory bound.",
         "Correctly reasoned that total retained timestamps in a map of per-user queues scale as users times per-user capacity.",
-        "Proposed a valid alternative undo design where a map points from document ID to the latest version while the version history stores the actual document contents."
+        "Proposed a valid alternative undo design where a map points from document ID to the latest version while the version history stores the actual document contents.",
+        "Completed the Round 12 teach-back: described saving a new document version by pushing the old version to history and updating current state, undo by restoring history, and identified atomicity as the key consistency obligation.",
+        "Completed the one-minute representation summary, including identity lookup, ordering, stacks, queues/heaps, and map plus doubly-linked-list tradeoffs.",
+        "Designed an in-memory event registry using a map for O(1) average ID lookup plus an ordered structure for arrival order, with synchronized eviction from both structures at capacity.",
+        "Explained remove-by-ID using a map to locate a doubly-linked-list node, O(1) unlinking, and deletion from the map.",
+        "Reasoned that if arbitrary removal is extremely rare, a simpler map plus slice/ring-buffer design can be preferable despite O(n) rare removals.",
+        "Understood recent(n) as walking from the newest end and reversing the collected result when oldest-to-newest output is required.",
+        "Started concurrency design with a single mutex and then understood sync.RWMutex: readers share RLock while writers take exclusive Lock."
       ],
-      "unresolved_concepts": [
-        "Finish Round 12 teach-back: explicitly name the operations, structures, and consistency obligations for undo plus document lookup.",
-        "Give the one-minute summary of how workload, ordering, identity, and ownership affect representation.",
-        "Complete the spoken event-registry program design."
-      ],
+      "unresolved_concepts": [],
       "prompted_successes": [
         "After explanation, understood why a fixed-capacity circular buffer may still need logical-size tracking depending on slice initialization.",
         "After clarification, distinguished the linked-list O(1) node lookup/removal from the O(n) search for a new sorted-by-priority insertion position.",
@@ -69,16 +50,24 @@
         "After explanation, understood that passing a slice by value copies the slice header while sharing the backing array, and that cloning/copying elements creates isolation.",
         "After the retained-memory issue was explained, proposed a fixed-size circular buffer with wraparound head movement as a bounded-queue solution.",
         "After correction, understood that the undo stack represents history while the map represents current document state, and that undo must keep those two representations consistent.",
-        "After discussion, distinguished the conventional current-state map plus command stack design from a map-to-version-history design and understood the consistency requirements of each."
+        "After discussion, distinguished the conventional current-state map plus command stack design from a map-to-version-history design and understood the consistency requirements of each.",
+        "After prompting, recognized that an array-backed queue requires O(n) middle removal and switched to map plus doubly-linked-list for O(1) known-node removal.",
+        "After clarification, distinguished get(id) from dequeue/evict-oldest operations.",
+        "After prompting, understood that recent(n) needs no heap, stack, or binary search because the existing ordered list already encodes arrival order.",
+        "After explanation, understood why read operations still require RLock with sync.RWMutex: readers do not need protection from each other, but they must be synchronized against writers."
       ]
     }
   },
   "review_queue": [
-    "Briefly revisit why heap+map and map+doubly-linked-list both use a map for O(1) identity lookup, but differ in how they restore ordering."
+    "Briefly revisit why heap+map and map+doubly-linked-list both use a map for O(1) identity lookup, but differ in how they restore ordering.",
+    "Reinforce the distinction between get(id), dequeue/evict-oldest, and recent(n) in an ordered event registry.",
+    "Revisit sync.RWMutex read-lock semantics and why unsynchronized reads are unsafe when writers may mutate a Go map."
   ],
   "error_log": [],
   "notes": [
-    "Session 01 is in progress. Rounds 1-3 are complete. Additional heap, circular-buffer, and linked-list material was discussed ahead of the numbered sequence but is not counted as passing later official rounds.",
-    "Paused during Session 01 Round 12 after comparing undo designs. Key insight: a map can point to current document state or to the latest version node; the history structure may store commands or full versions, depending on semantics and memory tradeoffs. Next: finish Round 12, summarize representation choices, then do the event-registry design."
+    "Session 01 is in progress. Round 12 is complete.",
+    "Round 12 concluded with the undo/current-state consistency teach-back and one-minute representation summary.",
+    "The spoken event-registry design is complete through bounded capacity, duplicate-ID semantics (assume duplicate add is rejected), arbitrary removal tradeoffs, recent(n), and concurrency with sync.RWMutex.",
+    "Next: begin Session 01 Round 13."
   ]
 }
