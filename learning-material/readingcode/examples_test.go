@@ -105,7 +105,7 @@ func TestCacheListInvariants(t *testing.T) {
 	a, b := &cacheNode{key: "A", value: 0}, &cacheNode{key: "B", value: 7}
 	insertFront(head, a)
 	insertFront(head, b)
-	c := ReadCache{map[string]*cacheNode{"A": a, "B": b}, head, tail}
+	c := ReadCache{byKey: map[string]*cacheNode{"A": a, "B": b}, head: head, tail: tail, capacity: 2}
 	for _, key := range []string{"A", "A", "B", "absent", "A"} {
 		value, ok := c.Get(key)
 		if key == "absent" {

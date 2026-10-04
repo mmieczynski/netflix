@@ -6,10 +6,11 @@ technical interview in Go with another senior engineer.
 
 Read the [PDF](output/pdf/netflix-go-interview-book.pdf), the
 [book introduction](learning-material/BOOK-INTRO.md), or the
-[reading chapters](learning-material/reading/). The book develops concepts through
-worked examples, vector diagrams, state tables, and complete program designs.
-Each chapter also includes an explained Go example, with assumptions, a small
-trace, and the connection between the code and its invariant.
+[reading chapters](learning-material/reading/). The revised book introduces the problem and expected output before explaining
+an approach. It uses literal arrays and maps, 43 state tables, 29 vector diagrams,
+and 65 Go code blocks across all 12 chapters. The code appears beside the
+concept it implements, with assumptions, a trace, an invariant, and boundary
+cases. Both final case studies include assembled implementations.
 The [conversation sessions](learning-material/sessions/) retain their questions
 and coaching notes. Neither route requires an editor, code execution, or timed work.
 
@@ -63,7 +64,7 @@ documentation from original exercises. These are not confirmed Netflix questions
 - `learning-material/book.txt`: complete plain-text edition.
 - `output/pdf/netflix-go-interview-book.pdf`: portable reading edition.
 - `learning-material/build_pdf.py`: regenerates the PDF and text edition.
-- `learning-material/sync_reading_code.py`: extracts reading examples for compiler checks.
+- `learning-material/sync_reading_code.py`: extracts every reading Go block for compiler checks.
 - `learning-material/readingcode/`: generated examples and their behavior tests.
 - `learning-material/*.go`: optional reference code; the book stands without it.
 
@@ -75,3 +76,4 @@ learning exercise. `plan.md` remains the original scope input.
 The reading and conversation editions are intentionally separate sources. When
 correcting a shared concept, inspect both editions; when changing presentation,
 tailor it to that edition. Do not regenerate the book by flattening the tutor's Q&A.
+

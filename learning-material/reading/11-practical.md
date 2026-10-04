@@ -1,101 +1,77 @@
-# Chapter 11 — Modeling larger practical programs
+# Chapter 11 - Modeling larger practical programs
 
-A practical prompt becomes manageable when you separate observable behavior, state, and transitions.
+A larger exercise usually introduces several methods and shared invariants. This chapter models a filesystem, nested transactions, pub/sub delivery, and a cached playback service. For each, begin with the observable behavior and a small valid transition; the method names alone do not define the contract.
 
-## An in-memory filesystem
+## Filesystem: paths traverse named child maps
 
-Directories have named children; files have contents. A tree mirrors this relationship. Resolve a path by splitting it into components and following child maps. Lookup costs O(number of components), plus string-processing cost. Listing a directory is proportional to its children, with additional sorting if the output must be lexical.
+**Problem.** Support directories and file contents in memory. After creating `/movies/action` and writing `/movies/action/a.txt`, reading that path returns its contents and listing `/movies` returns `["action"]`.
 
-Before implementation, define whether repeated separators are allowed, whether dot and dot-dot are normalized, whether missing parents are created, and whether a file can be overwritten by a directory. You can deliberately restrict the first version to absolute normalized paths. State that restriction instead of silently implementing incomplete path semantics.
+Restrict the first version to normalized absolute paths without repeated separators, '.' or '..'. A file has contents; a directory has children. The tree represents ownership, not just path strings.
 
-Move is not merely deleting one map entry and inserting another. Reject moving a directory inside its own descendant; otherwise you introduce a cycle or detach an entire subtree incorrectly. Validate destination rules before mutating either parent so failed moves leave the filesystem unchanged. Copy requires new nodes; sharing the old subtree would make edits to one copy change the other.
+![Path resolution follows root, movies, action, and the named file through child maps.](figures/filesystem.svg)
 
-## A transactional key-value store
+| Operation | Required behavior |
+| --- | --- |
+| mkdir | Create directory; define missing-parent policy |
+| write | Store contents; reject treating a directory as a file |
+| read | Return file contents and presence/error |
+| ls | List directory children, sorted if promised |
+| delete | Define whether nonempty directories may be removed |
+| move | Validate both ends before mutation; reject descendant cycles |
+| copy | Create independent nodes, not shared child maps |
 
-Start with a base map and a stack of transaction overlays. Reads search overlays newest to oldest, then the base. Each overlay stores either a value or a tombstone representing deletion. A missing overlay entry means “keep searching”; a tombstone means “the key is absent.” Confusing those two states makes deleted values reappear from lower layers.
+## Go example: resolve already validated path components
 
-Begin pushes an empty overlay. Rollback discards the top overlay. Commit merges it into its parent overlay, or into the base if no parent exists. For nested transactions, an inner commit does not necessarily make changes durable outside the outer transaction. Our contract keeps them within the outer transaction until that transaction commits.
+This is the path-resolution core, not a complete filesystem. The caller splits a normalized path into components such as `["movies", "action", "a.txt"]`, and the root is an existing directory.
 
-Trace base A equals five. Begin outer and set A to ten. Begin inner and set A to twenty. Commit inner: the outer overlay now holds twenty. Roll back outer: base A is five again. If your implementation committed the inner overlay directly to base, it violates this contract. Reads cost O(depth) map lookups; committing costs proportional to the top overlay's changes.
+```go
+type FSNode struct {
+    IsFile bool
+    Content string
+    Children map[string]*FSNode
+}
 
-**Failure case.** Removing a key from an overlay cannot hide a value that still exists in a lower layer.
+func Resolve(root *FSNode,
+    parts []string) (*FSNode, bool) {
+    current := root
+    for _, name := range parts {
+        if current == nil || current.IsFile {
+            return nil, false
+        }
+        current = current.Children[name]
+        if current == nil {
+            return nil, false
+        }
+    }
+    return current, current != nil
+}
+```
 
-Removing the overlay entry exposes the older base value. A tombstone must stop lookup and report absence. This is the same distinction between “no update here” and “an explicit deletion” that appears in temporal storage and merge systems.
+For the valid example, resolve movies, then action, then a.txt. A missing child or a file before the end fails. The empty component list resolves root. Work is expected O(depth) child lookups plus hashing/path parsing; this iterative core uses O(1) auxiliary state.
 
-## Pub/sub and callback ownership
+Moving `/movies` inside `/movies/action` would create a cycle. Validate ancestry, source existence, and destination collision before unlinking anything, so a rejected move preserves state. A deep copy must recreate child maps and nodes. Concurrency requires a lock around the complete multi-parent mutation, not independent locks around each map write.
 
-Use topic to subscriber-ID to callback maps. Return a subscriber ID from Subscribe; arbitrary Go function values cannot be compared to each other for equality, so callback identity alone is not a suitable map key. On Publish, copy the current subscriber callbacks while holding the lock, release it, then invoke the copy. This allows callbacks to subscribe or unsubscribe without deadlocking or invalidating map iteration.
+## Nested transactions: overlays contain instructions
 
-Define snapshot semantics: a subscriber removed during a publication may still receive that publication if it was in the snapshot. A synchronous slow callback delays later callbacks. Asynchronous delivery needs bounded buffers and a backpressure or drop policy; spawning unbounded goroutines transfers the problem into memory growth. Decide whether callback panics propagate or are recovered at the API boundary. These are behavioral choices with tests, not just implementation details.
+**Problem.** Start with base `{A: "1"}`. Begin an outer transaction, set A to "2", begin an inner transaction, delete A, commit inner, then roll back outer. The final visible A must be "1".
 
-## A playback metadata service
+A transaction overlay maps keys to edits. Reads search newest overlay first. An edit can mean a value, deletion, or no instruction. Only no instruction permits searching older layers. A deletion tombstone must stop lookup.
 
-Compose the previous lessons around GetPlayback. Validate user and video inputs. Check metadata cache. On a fresh hit, return the cached metadata. On a miss, join or initiate the per-key load. If loading succeeds, publish it with TTL and capacity accounting. If it fails, return an error or an explicitly allowed stale value. Expiration, eviction, and in-flight loading have different purposes.
+![A tombstone in the newest overlay hides lower values. It is different from an absent overlay entry.](figures/transactions.svg)
 
-Define metrics precisely. One request can be a cache miss while joining an already-running load, so backend-load count need not equal miss count. A stale value served under an outage policy needs its own metric if you care about freshness. Do not cache authorization decisions under video ID alone; user-specific data requires an appropriate key or a separate authorization check.
+## Worked example: inner commit does not bypass outer rollback
 
-What if an object is larger than the memory budget? Return the successful backend result to the caller while declining to cache it under our chosen policy. Cache admission failure need not mean playback failure. What if twenty callers cancel while one remains? Shared load lifetime and individual waiting lifetimes are separate decisions.
-
-## Model a small program as a sequence of valid transitions
-
-A larger coding prompt often overwhelms because it introduces several methods at once. Reduce it to a state machine: what is the state before a call, which preconditions allow the call, which mutations happen, and what must be true when it returns? You do not need formal notation. You need an operation sequence precise enough that another person could act as the computer.
-
-For a filesystem move, the state consists of nodes and parent-child relationships. A successful move changes two relationships: remove the source from its old parent and add it under the destination parent. But checking whether the destination exists, whether the new name conflicts, and whether a cycle would be created should normally happen first. Otherwise a failed validation can leave the source detached. This is the same “validate before destructive mutation” principle used for oversized cache admission.
-
-A transaction overlay illustrates a different modeling skill: representing absence separately from no change. If an upper layer does not mention key A, read the lower layer. If the upper layer says A was deleted, stop and report missing. Both situations lack a normal value in the upper layer, but they have different behavior. A tombstone preserves that distinction. Many subtle bugs are really failures to represent two semantically different states separately.
-
-Callbacks make ownership and reentrancy visible. A pub/sub system owns its subscriber registry, but a callback is arbitrary user-controlled work. Holding the registry lock while executing that callback extends the lock across code whose duration and behavior you do not control. Taking a snapshot of subscribers separates the protected registry operation from later delivery. The snapshot policy then becomes part of the contract: a subscriber removed after the snapshot may still receive the current message.
-
-Composition adds another dimension. A playback service can validate access, look up metadata, join an in-flight load, and update metrics. Keeping each responsibility explicit helps you reason about errors. A successful backend response that is too large to cache can still be returned. A cache miss that joins another caller's load need not cause another backend request. “Request failed,” “cache did not admit,” and “load was shared” should not collapse into one undifferentiated status.
-
-## Worked example: deletion is a value in the transaction overlay
-
-The base map contains A:1. Begin an outer transaction and set A to two. Begin an inner transaction and delete A. A lookup must report missing, even though both lower layers still contain a value. The inner deletion is therefore represented by a tombstone, not by removing A from the inner map.
-
-![Lookup searches from the newest transaction downward. A tombstone stops the search and reports missing.](figures/transactions.svg)
-
-| Operation | Base | Outer overlay | Inner overlay | Visible A |
+| Action | Base | Outer | Inner | Visible A |
 | --- | --- | --- | --- | --- |
-| Initial | A:1 | None | None | 1 |
-| Begin; Set A=2 | A:1 | A:2 | None | 2 |
-| Begin; Delete A | A:1 | A:2 | A:deleted | Missing |
-| Commit inner | A:1 | A:deleted | None | Missing |
-| Roll back outer | A:1 | None | None | 1 |
+| Initial | `{A:1}` | None | None | 1 |
+| Begin; Set A=2 | `{A:1}` | `{A:2}` | None | 2 |
+| Begin; Delete A | `{A:1}` | `{A:2}` | `{A:deleted}` | Missing |
+| Commit inner | `{A:1}` | `{A:deleted}` | None | Missing |
+| Rollback outer | `{A:1}` | None | None | 1 |
 
-Committing the inner layer copies its tombstone into the outer layer. It does not delete A from the base yet. Otherwise rolling back the outer transaction could not restore the original state. When the outermost transaction commits, applying its tombstone finally removes A from the base.
+Committing inner merges into outer; it must not delete base A yet. Otherwise outer rollback could not restore the original value. Nested transactions here are single-session overlays, not a claim about concurrent database isolation.
 
-Each overlay lookup has three outcomes: a value is present, a tombstone is present, or this layer says nothing. Only the third outcome permits searching older layers. This is a small instance of a broad modeling rule: absence of an instruction and an instruction to remove something are different states.
-
-## Worked example: define what a publish snapshot means
-
-A topic currently has subscribers A and B. Publish copies the subscriber list under a lock, then releases the lock before calling callbacks. During A's callback, A unsubscribes B. The snapshot still contains B, so B receives this publication under snapshot semantics. Future publications omit B.
-
-This is a reasonable contract, but it must be explicit. A stronger promise that unsubscribe prevents every later callback invocation would need additional coordination and a decision about a callback already in flight. Invoking arbitrary callbacks while holding the registry lock is a tempting shortcut that can deadlock when A calls unsubscribe on the same registry.
-
-| Event | Live registry | Current publish snapshot |
-| --- | --- | --- |
-| Publish begins | A, B | A, B |
-| A removes B | A | A, B |
-| B callback runs | A | A, B |
-| Next publish | A | A |
-
-Copying the subscriber list solves ownership of the list, not every failure policy. Synchronous callbacks mean one slow subscriber delays later ones. Asynchronous delivery requires queue bounds, cancellation, and an overflow policy. A callback panic also needs an explicit policy if the prompt expects continued delivery. The first implementation should fulfill a small stated contract; extensions should name the new state and guarantee they introduce.
-
-## Putting the program together: nested transactions
-
-The database exposes Begin, Get, Set, Delete, Commit, and Rollback. Outside a transaction, writes affect a base map. Inside a transaction, they affect only the newest overlay. An overlay entry is either a value or a deletion marker. Commit merges the newest overlay into its parent if one exists, otherwise into the base. Commit or Rollback with no active transaction returns an error without mutation.
-
-Begin pushes an empty map onto a stack. Set stores a value entry in the top overlay, or the base when the stack is empty. Delete stores a tombstone in the top overlay, or removes the base entry outside a transaction. Get searches overlays newest to oldest. A value returns immediately, a tombstone returns missing, and no entry continues the search. Only after all overlays are silent does it read the base.
-
-Commit first checks that an overlay exists. Remove that overlay from the stack, then merge each change into the new top layer. Copy both values and tombstones into a parent overlay so deletions remain explicit. When committing into the base, a tombstone performs an actual delete and a value performs an assignment. Rollback simply discards the newest overlay. These operations define nesting without needing to copy the entire database at each Begin.
-
-With base A equal to five, Begin then Set A to ten affects only the outer overlay. Begin again and Set A to twenty affects the inner one. Commit inner moves twenty into outer. Rollback outer discards it, leaving base five. If inner Delete A is committed instead, the outer overlay must contain a tombstone; merely deleting A from the overlay would reveal the original five too early.
-
-Get costs up to one map lookup per active depth. Commit work is proportional to the number of changes in the top overlay. This is a single-threaded nesting model, not an implementation of all database isolation levels. Adding concurrent transactions requires a visibility and conflict policy beyond simply putting a mutex around each method.
-
-## Go example: distinguish a tombstone from no instruction
-
-This complete read operation searches transaction overlays from newest to oldest, then the base map. Each overlay maps keys to edits. A missing key, including in a nil overlay map, means that layer has no opinion; an explicit Deleted edit stops lookup. Writes and commit are separate operations described earlier.
+## Go example: layered reads distinguish absence and deletion
 
 ```go
 type Edit struct {
@@ -105,7 +81,7 @@ type Edit struct {
 
 func ReadLayered(base map[string]string,
     layers []map[string]Edit, key string) (string, bool) {
-    for i := len(layers) - 1; i >= 0; i-- {
+    for i := len(layers)-1; i >= 0; i-- {
         edit, found := layers[i][key]
         if !found {
             continue
@@ -120,6 +96,123 @@ func ReadLayered(base map[string]string,
 }
 ```
 
-For base A:1, outer A:2, and inner A:deleted, this returns missing immediately from the inner layer. Removing the inner layer reveals two. Removing both layers reveals one. Setting A to the empty string in the inner layer returns empty and true; the Deleted flag prevents that valid value from being mistaken for a tombstone.
+An edit with `Value: ""` and Deleted=false is a valid empty value. A missing map entry is no instruction. Deleting a key from an overlay would expose a lower value, so it cannot represent deleting the logical key.
 
-The critical distinction occurs before the value is inspected: `found` says whether the layer has an instruction at all. Deletion is one such instruction. With d overlays, a lookup makes at most d+1 expected constant-time map lookups, so its expected time is O(d), with constant extra space.
+## Putting the program together: begin, commit, and rollback
+
+The following complete transaction stack initializes base lazily. Begin pushes an empty overlay. Rollback discards only the newest overlay. Commit copies its edits to the parent, or applies them to base when no parent remains.
+
+```go
+type TransactionStore struct {
+    base map[string]string
+    layers []map[string]Edit
+}
+
+func (s *TransactionStore) Begin() {
+    s.layers = append(s.layers, make(map[string]Edit))
+}
+
+func (s *TransactionStore) Change(key string, edit Edit) {
+    if len(s.layers) > 0 {
+        s.layers[len(s.layers)-1][key] = edit
+        return
+    }
+    if s.base == nil {
+        s.base = make(map[string]string)
+    }
+    if edit.Deleted {
+        delete(s.base, key)
+    } else {
+        s.base[key] = edit.Value
+    }
+}
+
+func (s *TransactionStore) Rollback() bool {
+    if len(s.layers) == 0 {
+        return false
+    }
+    s.layers = s.layers[:len(s.layers)-1]
+    return true
+}
+```
+
+Commit reuses Change after removing the newest layer, so Change naturally targets its parent or base.
+
+```go
+func (s *TransactionStore) Commit() bool {
+    if len(s.layers) == 0 {
+        return false
+    }
+    top := s.layers[len(s.layers)-1]
+    s.layers = s.layers[:len(s.layers)-1]
+    for key, edit := range top {
+        s.Change(key, edit)
+    }
+    return true
+}
+
+func (s *TransactionStore) Get(key string) (string, bool) {
+    return ReadLayered(s.base, s.layers, key)
+}
+```
+
+A read costs expected O(transaction depth); commit costs O(changes in the top layer). Rollback logically discards a layer in O(1), excluding later garbage collection. Call Commit or Rollback without an active transaction and receive false, with no mutation. Concurrency needs an explicit session/isolation contract before adding locks around this shared stack.
+
+## Pub/sub: callbacks need a delivery snapshot
+
+**Problem.** Subscribers A and B receive a message. During A's callback, A unsubscribes B. Under snapshot semantics, B still receives this publication because it was subscribed at the start; the next publication excludes B.
+
+![Publishing copies callback membership under the lock and invokes the snapshot after unlocking.](figures/pubsub.svg)
+
+A topic maps subscriber IDs to callbacks. Return an ID from Subscribe: arbitrary Go function values cannot be equality-compared to identify subscriptions. Calling callbacks while holding the registry lock can deadlock when a callback subscribes or unsubscribes.
+
+## Worked example: live registry and current snapshot differ
+
+| Event | Live subscribers | Publish snapshot |
+| --- | --- | --- |
+| Publish begins | `[A, B]` | `[A, B]` |
+| A unsubscribes B | `[A]` | `[A, B]` |
+| B is called | `[A]` | `[A, B]` |
+| Next publish | `[A]` | `[A]` |
+
+The core below accepts a prebuilt registry and promises no callback order. Mutation methods must use the same mutex.
+
+```go
+type TopicBus struct {
+    mu sync.Mutex
+    callbacks map[string]map[int]func(string)
+}
+
+func (b *TopicBus) Publish(topic, message string) {
+    b.mu.Lock()
+    var snapshot []func(string)
+    for _, callback := range b.callbacks[topic] {
+        snapshot = append(snapshot, callback)
+    }
+    b.mu.Unlock()
+    for _, callback := range snapshot {
+        callback(message)
+    }
+}
+```
+
+The lock protects membership copying; it does not cover user callbacks. Cost is O(s) for s subscribers plus their work, with O(s) snapshot space. This synchronous core lets one slow callback delay later ones and lets a panic propagate. Asynchronous delivery adds queue bounds, cancellation, ordering, and an overflow policy; unbounded goroutines do not solve backpressure.
+
+## Playback service: compose the contracts already defined
+
+**Problem.** `GetPlayback(user, video)` uses an expensive metadata backend. Cache fresh metadata, share concurrent loads, bound cache space, and report errors and hit/miss metrics. Authorization remains a separate per-user check.
+
+| Step | Decision and state change |
+| --- | --- |
+| Validate/authorize | Confirm this user may request this video |
+| Fresh cache lookup | Hit returns metadata; miss continues |
+| Join/create load | One leader fetches; followers wait |
+| Backend response | Share success or error with every waiter |
+| Admission | Successful oversized metadata may be returned without caching |
+| Metrics | Count request hit/miss separately from backend loads |
+
+If 3 requests miss A and share one fetch, record 3 misses and 1 backend load. Admission rejection is not backend failure. If stale data may be served during an outage, specify its freshness limit and measure that outcome separately.
+
+The cache key must cover the metadata's identity. Do not cache a user-specific authorization decision under video ID alone. A late response after invalidation may require a version check before admission. Cancellation of one caller need not cancel shared work still needed by other callers.
+
+Start with the smallest stated behavior, then name the additional state for each follow-up. A service composition is understandable when every method preserves the local contracts rather than hiding them behind one large function.

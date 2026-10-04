@@ -1,69 +1,71 @@
-Validation updated 1 October 2026
+Validation updated 4 October 2026
 
-Reading and conversation editions
-- Reading edition: 12 chapters, 24 worked examples, 12 vector diagrams,
-  19 comparison/state tables, 11 program designs, and two complete case studies.
-- Approximately 29,051 source words; 122-page PDF in a 6 x 9 inch format.
+Reading edition revision
+- Rewrote all 12 canonical reading chapters around concrete problems, inputs,
+  expected results, assumptions, state changes, and then the implementation.
+- Literal arrays, maps, intervals, timestamps, and return values replace verbal
+  descriptions wherever the exact state matters.
+- The reading edition contains 25 worked examples, 29 vector diagrams, 43 state
+  tables, 42 problem briefs, 65 Go code blocks, 12 worked program designs, and two
+  complete interview case studies.
+- Approximately 18,274 source words; 137-page PDF in a 6 x 9 inch format.
 - Separate canonical reading Markdown and reading-index.json drive the PDF build.
-- Conversation sessions retain all 132 numbered rounds and coaching explanations.
-- Built PDF, plain text, SVG figures, and manifest successfully.
-- Checked all reading-index paths, all 12 SVG references/XML, chapter coverage,
-  example counts, nonempty PDF pages, and absence of Q&A rounds in the PDF.
-- Reviewed rendered pages and inspected all twelve figure pages at higher resolution.
-  Checked labels, monochrome contrast, captions, table layout, and code-block breaks.
-- Original plan.md and learner progress preserved. No editor or timed work required.
-- Tutor guidance retrieves either edition appropriately and adapts visuals for speech.
-- Twelve new Go example sections (13 code blocks) are extracted verbatim into
-  readingcode/examples.go for compilation; complete functions and scoped helpers
-  have explicit contracts and explanations in the book.
-- go test ./readingcode -count=1 -cover passed: 99.1% statements.
-- go vet ./readingcode passed with the portable Go 1.27.1 toolchain.
-- New tests include all 5,461 four-symbol windows of lengths zero through six,
-  brute-force reward subsets, graph cycles, list/map invariants, stale generations,
-  exact expiry/admission boundaries, input preservation, tombstones, and duplicates.
-- Original optional reference packages were not changed by this revision.
-- Rendered all 122 final pages. Reviewed every figure and new code example at
-  higher resolution, plus full-document contact sheets and a grayscale LRU proof.
-- Nine-point code is kept in unsplit panels with no automatic line wrapping.
+- Built the PDF, plain text, SVG figures, and manifest successfully.
+- Conversation sessions retain all 132 numbered rounds. Original plan.md,
+  learner progress, and optional reference implementations were not changed.
 
-Diagram review and revisions
-- All twelve diagrams use vector artwork, a consistent navy heading, rounded
-  cards, larger node labels, and light emphasis that remains distinct in grayscale.
-- Representation: labels state which information each summary retains.
-- Window: numbered repair steps, active-state legend, corrected left/right labels.
-- Binary search: explicit indices, predicate, boundary, and predecessor result.
-- Graph: distance inside each vertex; equal-hop assumption stated.
-- Dynamic programming: concrete 6/10/6 branches with the winning 12 highlighted.
-- LRU: before/after map references, stable node identities, sentinel endpoints,
-  and an explicit next/prev arrow legend.
-- Expiry: deadlines and generations identify why an old record is discarded.
-- Limiter: expire/count/admit sequence and repeated-request rejection explained.
-- Scheduler: absent-key or generation mismatch is distinct from a valid claim;
-  the actual stale-record branch is highlighted.
-- Ranking: each stage names its rule and shows the surviving records.
-- Transactions: tombstone stops lookup; lower layers explicitly not visited.
-- Combined cache: heap record passes through lookup/generation validation before
-  it can act on a current node; it is not drawn as a direct resident reference.
-- All SVG files parse; figure label widths and code line widths are checked by
-  the builder. Final rendered pages showed no clipped labels or overlapping text.
-
-Optional Go references (validated before the book-format revision)
-- Tested using the official Go 1.27.1 Windows amd64 portable archive.
-- Archive SHA256 checked against go.dev release metadata before extraction.
-- Toolchain placed in the system temp directory, not installed on PATH.
-- gofmt applied to all Go sources.
-- go test ./... -count=1 -cover passed: 95.2% statement coverage.
+Code verification
+- sync_reading_code.py extracts all 65 fenced Go blocks verbatim into the
+  readingcode example package, with shared package/import boilerplate.
+- Full algorithm functions and the LRU, weighted cache, TTL map, transaction
+  stack, and combined metadata cache baseline compile together. Filesystem
+  resolution, pub/sub publishing, and scheduler claiming/draining are explicitly
+  described as cores with stated preconditions and omitted methods.
+- Validated with the Go 1.22.2 Linux amd64 toolchain and the repository's existing
+  go 1.20 module declaration.
+- go test ./... passed for both optional references and readingcode.
+- go test -race ./... passed for both packages.
 - go vet ./... passed.
-- Tests include brute-force comparisons, an independent LRU model,
-  expiry generations, exact window boundaries, ranking against full sorting,
-  and concurrent cache and admission operations.
-- Race-detector execution was unavailable because the required CGO/C toolchain
-  was missing. Concurrent tests without instrumentation do not prove race safety.
+- Added exhaustive small signed-array comparisons with independent brute-force
+  results for exact-sum subarrays and product-except-self, including zeros.
+- Added checks for literal algorithm examples, Unicode rune windows, sorted
+  input preservation, touching half-open interval coverage, rotated searches,
+  graph cycles and cloning, ancestor BST bounds, and deterministic top-k results.
+- Cache and event checks cover recency, multiple weighted evictions, stale TTL
+  generations, exact expiry/admission boundaries, fractional token refill,
+  nested transaction tombstones, and rolling contribution reversal.
+- Shared-loader tests register a follower before publishing the leader's result
+  and check the completion notification and removal of the in-flight record.
+- Race detection checks executed paths; it does not prove absence of all races.
 
-Boundaries
-- Original educational exercises are not confirmed Netflix interview questions.
+PDF and diagram verification
+- PDF built with ReportLab 4.4.9 and checked with pypdf 6.10.0 in this environment.
+- Font selection checks all four family styles before registration and falls
+  back to bundled fonts when platform-specific fonts are unavailable.
+- All 29 SVG files parse; the builder checks figure-label and code-line widths.
+- All 29 figure headings appear in the extracted PDF text, including image
+  captions containing array brackets. No raw figure-reference Markdown remains.
+- All 137 final pages were rendered and reviewed in full-document contact sheets.
+  Detailed checks covered the prefix-frequency trace, stack example, LRU diagram,
+  and code panels. No clipped labels, overlapping text, or missing figures found.
+- Checked character bounds on every page; no text extends beyond the checked
+  page margins. No empty or unexpectedly sparse body pages were found.
+- Code uses nine-point monospaced panels without automatic line wrapping.
+  Long panels can split with a continuation label; short trace tables stay
+  together, while longer tables repeat their header when split.
+- Diagrams use vector artwork, consistent navy headings, readable node labels,
+  and light emphasis that does not require color to understand the example.
+- Checked reading-index paths, chapter coverage, expected example counts, and
+  absence of conversation Q&A rounds from the reading PDF.
+- git diff --check passed.
+
+Scope and boundaries
+- These are original educational exercises, not confirmed Netflix interview
+  questions or a description of Netflix's actual recommendation algorithms.
 - No fixed reading or conversation duration is promised.
-- The book teaches reasoning; spoken work does not establish Go syntax fluency.
-- Remote repository access and write capability depend on the actual connection.
-  Repository guidance requires the tutor to read material and report access honestly.
-- Changes have not been pushed to GitHub by this authoring task.
+- The book is usable independently without an editor or running code. Spoken
+  work does not establish Go syntax fluency or provide compilation evidence.
+- Inputs and arithmetic bounds, clock monotonicity, callback order, concurrency,
+  and retention assumptions are stated beside the relevant examples.
+- GitHub changes are committed directly to main as requested; updating the book
+  does not mark study topics as learned.

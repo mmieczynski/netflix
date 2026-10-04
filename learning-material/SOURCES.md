@@ -1,6 +1,6 @@
 # Sources and scope
 
-Research checked on 30 September 2026. The exercises and learning sequence are original preparation material; they are not a leaked or verified Netflix question bank.
+Original scope research checked on 30 September 2026. Reading edition revised on 4 October 2026; Go specification, heap, sync, and memory-model references rechecked for the revised examples. The exercises and learning sequence are original preparation material; they are not a leaked or verified Netflix question bank.
 
 ## What informed the preparation
 
@@ -32,7 +32,14 @@ Internet searches covered Netflix technical-screen descriptions, CodeSignal's ow
 
 Two Sum, anagrams, windows, and array products appear in lesson 2. Three Sum, intervals, binary search, top k, and kth-element selection share lesson 3's ordering tools. Tree traversal, BST validation, islands, course dependencies, and graph cloning appear in lesson 4. LRU, weighted capacity, TTL, combined expiration, and concurrency are lessons 6 and 7. The two rate limiters are lesson 8. Time-based storage, deduplication, counters, and scheduling are lesson 9. Streaming statistics and recommendation tasks are lesson 10. Filesystem, transactions, pub/sub, and playback-service composition are chapter 11 and its worked program design.
 
-Not every topic has a complete code solution. The supplied runnable references cover representative patterns and the highest-priority cache and limiter building blocks. Other tasks include derivations, traces, hints, contracts, and suggested tests so that you practise constructing them. Two original case studies combine several ideas and supply complete worked designs. An AI tutor can also use them as oral mocks.
+The reading edition now includes 65 Go blocks extracted into one compiler-checked
+example package. Algorithms and the LRU, weighted cache, TTL map, transaction
+stack, and combined metadata-cache baseline are assembled implementations.
+Filesystem resolution, pub/sub publishing, and scheduler claiming/draining are
+explicitly labelled cores with their surrounding preconditions. They are not
+presented as complete implementations of every optional service method.
+The final ranking case composes the earlier comparator with filtering,
+deduplication, and aggregation. The conversation edition remains separate.
 
 ## A further connection
 
@@ -52,3 +59,4 @@ describes conversational turn-taking and task permissions.
 [Official workspace connection guidance](https://learn.chatgpt.com/docs/enterprise/shared-connections)
 distinguishes resource access from write actions and recommends checking them
 separately. These pages do not verify this reader's account configuration.
+

@@ -1,108 +1,24 @@
-# Chapter 7 — Expiration clocks and concurrency
+# Chapter 7 - Expiration, clocks, and concurrency
 
-Time introduces a second order. Concurrency makes a sequence of correct individual steps unsafe unless they form one protected operation.
+An LRU cache limits space but says nothing about freshness. Movie metadata can become stale while remaining popular. This chapter gives each write a lifetime, orders cleanup by deadlines, and protects multi-step mutations when several callers share the cache.
 
-## Expiration is a behavioral rule first
+## TTL: define exactly when a value becomes unavailable
 
-For our TTL cache, Put at time t with positive lifetime d stores an absolute deadline t plus d. Get at time now returns a value only when now is strictly before the deadline. At the deadline it is expired. A nonpositive lifetime removes the key immediately. Updating resets the lifetime. A Get does not extend it. These choices distinguish expire-after-write from expire-after-access.
+**Problem.** Store `Put("A", "HD", ttl=5)` at time 0. A read at time 4 returns HD; a read at time 5 returns missing. TTL means time to live. Our deadline is `writeTime + ttl`, and a value is live only when `now < deadline`.
 
-Use an injected clock so tests control now directly. The learning code uses int64 ticks in one agreed unit and assumes monotone time and no arithmetic overflow. In a real Go process, a clock returning time.Time can preserve monotonic elapsed-time behavior; persisted timestamps need different care. The important point is to make the source and meaning of time explicit, and never rely on real sleeping in unit tests. [Go time documentation](https://pkg.go.dev/time#hdr-Monotonic_Clocks).
+Overwriting resets the lifetime; reading does not extend it. Nonpositive TTL removes the key. The clock is injected, uses one agreed integer tick unit, and never goes backward. Deadline arithmetic and generation numbers must not overflow.
 
-A map with per-entry deadlines gives expected constant-time lookup. On Get, delete an expired entry and return missing. This is lazy expiration: it prevents stale reads, but an entry never read again may remain allocated indefinitely. Correct visibility and prompt memory reclamation are different requirements. Start with the simple version, then explain the gap honestly.
-
-## Choose cleanup by the required order
-
-A periodic scan checks every entry in linear time per sweep. It is simple and may be sufficient. A min heap of deadlines makes the next expiry easy to find. Repeatedly pop while the smallest deadline is at or before now. Removing r records costs O(r log h) where h is heap size. A queue only works if expiry order matches insertion order, such as a uniform TTL with monotone writes. Different TTLs break that assumption.
-
-On each Put, store the current value, deadline, and a new generation number in the map; push deadline, key, generation into the heap. On cleanup, delete the map entry only if its generation still matches the popped record. This prevents an old timer from deleting a newer value. Assign generations from a globally increasing sequence, or otherwise avoid reusing an old generation after a key is deleted and recreated.
-
-Trace A written at time zero, expiring at ten, generation one. At time five, overwrite A to expire at thirty, generation two. At time ten, the old heap record is ready. The map holds generation two, so discard the record without deleting A. The same defense applies to cancelled or rescheduled tasks. Reference: `TTLCache`.
-
-**Failure case.** Two different writes of the same key can share a deadline, so a deadline alone need not identify a write.
-
-The same key can identify multiple lifetimes. Equal deadlines may be reused, and future changes can make deadline-only identity fragile. A unique generation identifies the particular write, so cleanup can prove it is acting on the current lifetime.
-
-Lazy invalidation simplifies updates but can accumulate stale heap records. Ten million rewrites of one key can produce ten million heap entries despite a one-entry map. Bound this by using an indexed heap with one live record per key, or periodically rebuild from live entries when stale overhead crosses a threshold. Rebuilding with heap.Init is linear in live entries, but creates a latency spike. “O(number of keys) memory” is not true for an unbounded lazy heap.
-
-## Combining TTL and LRU
-
-The map still answers identity. The linked list answers least recently used. The deadline heap answers earliest expiration. These are independent orders. An expired node can be at the front of the recency list, so removing only expired nodes at the tail does not clean all expired entries.
-
-Choose whether capacity counts all physically stored entries or only unexpired ones. For “evict expired entries before live ones,” a straightforward Put first drains all due expirations, then updates or inserts, then evicts LRU entries if capacity is exceeded. That Put is not constant time when many items expire together. Get can remain approximately constant time by checking only its own key and leaving global cleanup elsewhere.
-
-Removal must consistently update the map, recency list, and weight counter if present. Heap records may remain as harmless stale versions under lazy invalidation. Reuse a central remove helper rather than implementing three subtly different removal paths for eviction, expiration, and explicit deletion.
-
-In your plan's capacity-three example, assume all actions occur before any deadline: Put A, Put B, Get A, Put C, Put D leaves D, C, A and evicts B. If A expires before D is inserted and cleanup removes expired entries first, A leaves and B can remain. Without specified elapsed time and cleanup policy, the original trace has no unique answer. Noticing that ambiguity is part of the skill.
-
-## Thread safety protects the whole invariant
-
-For a first concurrent implementation, put one mutex around each public operation that touches shared state. A successful LRU Get mutates the list, so it needs an exclusive lock. A TTL Get may delete an expired entry, so it is not automatically a read-only operation either. Protecting the map alone while updating pointers outside the lock leaves races and structural corruption.
-
-Do not copy a cache containing a used mutex. Return pointers from constructors and use pointer receivers. Do not try to upgrade an RWMutex read lock into a write lock. A specialized concurrent map would protect only map operations, not the combined map/list/weight invariant. These synchronization rules are grounded in the [Go sync documentation](https://pkg.go.dev/sync) and [memory model](https://go.dev/ref/mem).
-
-Slow loading introduces another concern. Holding the global cache mutex while calling a metadata service blocks unrelated keys. Instead check the cache, coordinate a per-key in-flight call, release the lock, load, then publish the result and wake waiters. Exactly one leader loads a key; other callers wait on that call's completion. Clear the in-flight record on failure as well as success. Decide whether failures are cached, whether stale values may be served, and how cancellations affect shared work.
-
-Single-flight loading prevents duplicate simultaneous work; it does not enforce TTL or capacity. If a key is invalidated while loading, decide whether the late result may repopulate it. An invalidation generation can prevent that. With sharding, locks can reduce contention, but a globally exact LRU order becomes harder; mention the trade-off rather than claiming sharding preserves every property for free.
-
-## Separate freshness, storage, and coordination
-
-Three questions often get bundled together in a cache prompt. Is this value fresh enough to return? Is this entry still taking space? Is another caller already fetching its replacement? TTL answers the first question, cleanup answers the second, and in-flight coordination answers the third. A correct answer to one does not automatically answer the others. An entry can be expired but allocated, and a missing entry can have a fetch already underway.
-
-Use a bookstore analogy carefully. An edition can become outdated at a known time even while its book remains on the shelf. A customer asking for that book must not be handed it as current. Removing it from the shelf can happen during that request or in a separate cleanup pass. Ordering shelves by most recent customer use does not order books by when their editions expire. That is why recency and deadline often require separate structures.
-
-Now consider an expiry message as a delayed instruction: “Delete A at time ten.” If A is replaced before time ten, the instruction lacks enough identity. It should say, “Delete the particular lifetime of A that I was created for.” A generation number provides that identity. Cleanup looks at the current generation and acts only if it matches. This prevents stale work from affecting newer state. The principle applies to rescheduled tasks, cancelled requests, and late background computations.
-
-Concurrency creates an analogous problem in the present rather than the future. Two requests can observe the same apparently available capacity before either records its own change. Each individual read and write may be safe, but their combined decision is not atomic. You need a single protected transition from the old valid state to the new valid state. For a cache, that transition can involve map, list, counters, and deadlines together.
-
-Think about the exact moment at which an operation takes effect. In a simple locked cache, it occurs within the critical section while other callers cannot interleave. If you release the lock halfway through promotion, another operation can see a state that is neither the old order nor the new order. Locks are therefore protecting a semantic invariant, not merely preventing a runtime complaint about concurrent maps.
-
-## Worked example: an old deadline is not permission to delete
-
-At time zero, store A with deadline five and generation one. At time three, overwrite A with a new value, deadline ten, and generation two. The current map holds only generation two, while a lazy deadline heap can still contain both records. This is intentional: removing arbitrary old heap records immediately would need more indexing.
-
-![The due record refers to A generation one. The map contains generation two, so cleanup ignores the old record.](figures/expiry.svg)
-
-| Time | Action | Current A | Heap effect |
-| --- | --- | --- | --- |
-| 0 | Initial write | Generation 1, due 5 | Push (5, A, 1) |
-| 3 | Refresh | Generation 2, due 10 | Push (10, A, 2) |
-| 5 | Cleanup | Generation 2 survives | Pop and ignore generation 1 |
-| 10 | Get A | Missing | Remove current entry |
-
-At time five, checking only the key would wrongly delete the replacement. Comparing the deadline happens to distinguish these two records, but two writes can intentionally share a deadline. The generation identifies the write even then. Deleting A and later reinserting it must also assign a fresh generation rather than restarting a per-entry counter at one.
-
-After the Get at time ten, a heap record may remain for a now-absent key. Later cleanup ignores it. The essential rule is that stale records cannot act on newer state. Space analysis must include those records; repeatedly refreshing one resident key can grow the heap far beyond the resident count unless cleanup or rebuilding bounds it.
-
-## Worked example: individually safe operations can form an unsafe sequence
-
-Suppose a deduplication wrapper has a thread-safe Get and a thread-safe Put. Worker one calls Get X and sees missing. Worker two calls Get X and sees missing. Both process the event, then both call Put X. No data race is necessary for this logical failure. Each method can be protected correctly while the combined decision is not atomic.
-
-| Step | Worker one | Worker two |
+| Time | Operation | Result |
 | --- | --- | --- |
-| 1 | Looks up X: missing | Waiting |
-| 2 | Paused | Looks up X: missing |
-| 3 | Processes X | Processes X |
-| 4 | Stores X | Stores X |
+| 0 | Put A with TTL 5 | Deadline 5 |
+| 4 | Get A | `("HD", true)` |
+| 5 | Get A | `("", false)`; remove A |
 
-An atomic claim operation combines checking absence and recording ownership under one lock. Only the worker that creates the claim proceeds. That fixes competing admission, but it introduces a new failure question: if the winner crashes after claiming, should another worker retry? A lease can allow a later retry, while an idempotent effect can make repeated execution tolerable. Neither follows automatically from a mutex.
+This is expire-after-write. Expire-after-access is a different contract and would change deadlines on reads. Tests can set an injected clock to 4 or 5 directly, with no sleeping.
 
-For a cache miss that triggers a slow load, the corresponding pattern is per-key in-flight work. Under a short lock, create or join the work record. Release the lock during the network call. Publish success or failure and release all waiters afterward. The design has to cover the failure branch as carefully as the successful return.
+## Go example: a map handles fresh visibility
 
-## Putting the program together: TTL storage with safe cleanup
-
-Expose Put(key, value, lifetime), Get(key), and Cleanup. A clock is supplied to the constructor. The store owns a map of current entries, a min heap of expiry records, and a generation sequence. Each current entry contains value, deadline, and generation. Each heap record contains key, deadline, and generation. Time units are consistent, deadlines fit the numeric type, and generation identities are not reused during relevant lifetimes.
-
-Put with a nonpositive lifetime removes the current map entry. Otherwise it reads the clock, computes the deadline, allocates a fresh generation, stores the current entry, and pushes an expiry record. An older record for that key can remain in the heap. Get returns missing if absent. If the clock is at or past the current deadline, it deletes the map entry and returns missing. Otherwise it returns the value. Get does not drain the whole heap.
-
-Cleanup reads now once for its cutoff. While the heap root is due, pop it. Look up its key in the current map. If absent, do nothing further. If present with a different generation, discard this stale record. Only a matching current generation may be deleted. A returned removal count can count current entries actually removed, rather than all stale heap records examined.
-
-Write A at zero with deadline ten. At five, overwrite it with deadline thirty and a new generation. Cleanup at ten pops the old record but leaves the map unchanged. Cleanup at thirty removes the new entry. Deleting and recreating A between those calls is safe only if recreation does not reuse the old generation.
-
-Put costs logarithmic time in heap size; Get is expected constant time; Cleanup costs according to the number of records popped. Heap size includes stale records, so repeated overwrites can grow memory. An indexed heap or periodic rebuilding addresses that extension. Adding a single mutex around public operations protects state, provided the injected clock is safe and does not reenter this cache.
-
-## Go example: validate a due record against current identity
-
-This helper applies one expiry record after a deadline heap yields it. For this standalone TTL map, deadline is in integer ticks and generations are fresh for every write, including delete-and-reinsert. Map access is owned by one goroutine or one external lock. A combined LRU cache must call its central removal helper instead of only deleting from the map.
+Each current entry carries its value, absolute deadline, and write generation. A generation identifies one lifetime of one key, so delayed cleanup cannot confuse it with a replacement.
 
 ```go
 type TimedValue struct {
@@ -117,6 +33,106 @@ type Expiry struct {
     Generation uint64
 }
 
+type TTLMap struct {
+    current map[string]TimedValue
+    due ExpiryHeap
+    next uint64
+    clock func() int64
+}
+
+func NewTTLMap(clock func() int64) *TTLMap {
+    return &TTLMap{
+        current: make(map[string]TimedValue),
+        clock: clock,
+    }
+}
+```
+
+ExpiryHeap is the min heap defined below. Heap storage is separate from current entries; it may retain records for earlier lifetimes.
+
+```go
+func (c *TTLMap) Put(key, value string, ttl int64) {
+    if ttl <= 0 {
+        delete(c.current, key)
+        return
+    }
+    deadline := c.clock() + ttl
+    c.next++
+    c.current[key] = TimedValue{
+        Value: value, Deadline: deadline,
+        Generation: c.next,
+    }
+    heap.Push(&c.due, Expiry{key, deadline, c.next})
+}
+
+func (c *TTLMap) Get(key string) (string, bool) {
+    entry, found := c.current[key]
+    if !found {
+        return "", false
+    }
+    if c.clock() >= entry.Deadline {
+        delete(c.current, key)
+        return "", false
+    }
+    return entry.Value, true
+}
+```
+
+Get checks only its own key and takes expected O(1). Deleting on read is lazy expiration. It prevents stale reads but cannot reclaim an expired entry that nobody reads. Fresh visibility and prompt memory cleanup are separate requirements.
+
+## Cleanup needs deadline order, not insertion order
+
+Write A at time 0 with TTL 100, then B at time 1 with TTL 2. Deadlines are `{A: 100, B: 3}`. A FIFO queue would see fresh A first and could leave expired B behind it. A deadline min heap exposes B first.
+
+![Insertion order [A, B] differs from deadline order [B, A]. Varying TTLs need a deadline index.](figures/deadline-order.svg)
+
+| Cleanup choice | Work | Assumption or trade-off |
+| --- | --- | --- |
+| Check on Get | Expected O(1) | Unread expired entries can remain |
+| Periodic map scan | O(n) per scan | Simple; scan latency grows with residents |
+| Deadline min heap | O(log h) per record removed | h includes stale records |
+| FIFO deadline queue | Amortized O(1) | Deadlines must follow insertion order |
+
+The Go standard heap package supplies swaps and repairs through an interface. The receiver's Pop removes the final slice element; `heap.Pop` first moves the minimum there. Calling the receiver's Pop directly would not mean remove-minimum.
+
+```go
+type ExpiryHeap []Expiry
+
+func (h ExpiryHeap) Len() int { return len(h) }
+func (h ExpiryHeap) Less(i, j int) bool {
+    return h[i].Deadline < h[j].Deadline
+}
+func (h ExpiryHeap) Swap(i, j int) {
+    h[i], h[j] = h[j], h[i]
+}
+func (h *ExpiryHeap) Push(value any) {
+    *h = append(*h, value.(Expiry))
+}
+func (h *ExpiryHeap) Pop() any {
+    last := len(*h)-1
+    value := (*h)[last]
+    (*h)[last] = Expiry{}
+    *h = (*h)[:last]
+    return value
+}
+```
+
+## Worked example: an old deadline must not delete a new value
+
+At time 0, write A with deadline 5 and generation 1. At time 3, refresh A with deadline 10 and generation 2. The map holds only the new value; the heap can hold both records.
+
+![Cleanup of generation 1 sees that current A is generation 2, so it ignores the old instruction.](figures/expiry.svg)
+
+| Time | Current map entry | Heap action |
+| --- | --- | --- |
+| 0 | `A: (old, 5, 1)` | Push `(A, 5, 1)` |
+| 3 | `A: (new, 10, 2)` | Push `(A, 10, 2)` |
+| 5 | `A: (new, 10, 2)` | Pop old record; ignore it |
+| 10 | Missing | Remove current generation |
+
+Checking only the key at time 5 would delete fresh data. A global increasing generation prevents reuse after deletion and recreation. Comparing deadlines can identify this simple trace, but a generation is an explicit write identity even when two writes share a deadline.
+
+```go
 func ApplyExpiry(current map[string]TimedValue,
     record Expiry, now int64) bool {
     if record.Deadline > now {
@@ -131,6 +147,105 @@ func ApplyExpiry(current map[string]TimedValue,
 }
 ```
 
-If the popped record is A generation one while the map holds generation two, the comparison prevents deletion. A missing key also returns false. At exactly the deadline, a matching generation is removed. The boolean reports an actual resident removal, not merely processing a heap record.
+## Putting the program together: drain only due records
 
-The helper relies on the invariant that a matching generation identifies a write whose stored deadline equals the record's deadline. Get must still check visibility at read time; a cleanup helper alone cannot promise that a value is fresh when cleanup has not run. Each helper call has expected constant map work; the surrounding heap pop costs logarithmic time in heap records, including stale ones.
+```go
+func (c *TTLMap) Cleanup() {
+    now := c.clock()
+    for len(c.due) > 0 && c.due[0].Deadline <= now {
+        record := heap.Pop(&c.due).(Expiry)
+        ApplyExpiry(c.current, record, now)
+    }
+}
+```
+
+Put takes O(log h); Get remains expected O(1); removing r due records costs O(r log(h+1)). Once the root is in the future, every remaining record is also in the future, so cleanup can stop.
+
+Stale records consume memory. Rewriting one key a million times can produce a million heap records despite one resident map entry. An indexed heap can keep one deadline record per resident, or a periodic rebuild can recreate the heap from current entries. A rebuild costs O(n) and introduces a latency spike; include it in the design rather than claiming memory is always O(residents).
+
+## TTL plus LRU: freshness and recency are independent
+
+Capacity 2 contains recency `[A, B]`, deadlines `{A: 5, B: 20}`. At time 5, Put C under an expired-first policy removes A before considering a live eviction. The result is `[C, B]`, even though A was most recent.
+
+The map answers identity, the list answers least recent, and the heap answers earliest deadline. Removing an entry must update the map and list together. Chapter 12 gives a complete combined baseline. Cleanup can remove many records in one Put, so the combined Put has variable work.
+
+## Worked example: method safety does not make a sequence atomic
+
+Two workers deduplicate event X using separate Get and Put calls. Each method can have a lock and still permit this sequence:
+
+| Step | Worker 1 | Worker 2 |
+| --- | --- | --- |
+| 1 | Get X: missing | Waiting |
+| 2 | Paused | Get X: missing |
+| 3 | Process X | Process X |
+| 4 | Put X | Put X |
+
+The check-and-record decision needs one atomic operation. Likewise LRU Get needs an exclusive lock because it moves list nodes, and TTL Get may delete expired entries. Protect the whole map/list/counter transition, not just the map access.
+
+```go
+type SafeReadCache struct {
+    mu sync.Mutex
+    cache *ReadCache
+}
+
+func (s *SafeReadCache) Get(key string) (int, bool) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    return s.cache.Get(key)
+}
+
+func (s *SafeReadCache) Put(key string, value int) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    s.cache.Put(key, value)
+}
+```
+
+Initialize cache with NewReadCache. Helpers assume the caller already holds the lock; locking each helper recursively can deadlock. Do not copy a struct after its mutex has been used. Read/write locks are useful only when the protected read is truly read-only.
+
+## Single-flight: share one pending backend load per key
+
+**Problem.** Three simultaneous misses for A should trigger one slow metadata load, while a load for B can proceed independently. Store a pending call per key. A leader loads outside the global lock; followers wait on its completion channel.
+
+![Two requests for A share one pending load; an unrelated B load can run independently.](figures/single-flight.svg)
+
+```go
+type loadCall struct {
+    done chan struct{}
+    value string
+    err error
+}
+
+type SharedLoader struct {
+    mu sync.Mutex
+    active map[string]*loadCall
+}
+
+func (l *SharedLoader) Do(key string,
+    load func() (string, error)) (string, error) {
+    l.mu.Lock()
+    if call, found := l.active[key]; found {
+        l.mu.Unlock()
+        <-call.done
+        return call.value, call.err
+    }
+    if l.active == nil {
+        l.active = make(map[string]*loadCall)
+    }
+    call := &loadCall{done: make(chan struct{})}
+    l.active[key] = call
+    l.mu.Unlock()
+
+    value, err := load()
+    l.mu.Lock()
+    call.value, call.err = value, err
+    delete(l.active, key)
+    close(call.done)
+    l.mu.Unlock()
+    return value, err
+}
+```
+
+This core assumes load returns normally, without panicking or recursively loading its own key. Followers receive both success and failure, and the pending record is cleared in either case. Channel completion publishes the result to waiters. This does not store a cache value or enforce TTL; compose it with fresh cache checks and admission.
+
+Cancellation, panic policy, and invalidation during loading require additional rules. A version check can prevent a late obsolete result from repopulating an invalidated key. Sharding can reduce lock contention but typically changes a globally exact LRU policy into separate per-shard policies.

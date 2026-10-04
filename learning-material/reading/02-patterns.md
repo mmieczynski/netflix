@@ -1,100 +1,184 @@
-# Chapter 2 — Hashing arrays and sliding windows
+# Chapter 2 - Hashing, arrays, and sliding windows
 
-A faster solution often remembers precisely the information that the next step needs.
+This chapter solves problems over ordered arrays: finding a pair, grouping equivalent words, finding a contiguous region, counting exact-sum subarrays, and combining products. A hash map is useful only after you decide what its keys and values mean. The examples make those meanings visible before showing code.
 
-## Two Sum as a lesson in sufficient state
+## Two Sum: find two distinct positions
 
-Suppose playback chunks have sizes two, seven, eleven, and fifteen. Find two distinct chunks totaling nine. Trying every pair is correct and quadratic. When considering seven, the only relevant question about earlier values is whether two occurred. Store value to earlier index. Before inserting the current value, look for target minus current value. This order prevents reusing the same element.
+**Problem.** Given `nums = [2, 7, 11, 15]` and `target = 9`, return two different indices whose values add to 9. The answer is `[0, 1]`, because `2 + 7 = 9`. Return missing when no pair exists; do not reuse one element twice.
 
-The invariant is that before processing position i, the map contains only positions before i. If the complement exists, the indices are distinct and their values sum to the target. If it does not, storing the current index prepares exactly what future positions need. Duplicates such as three and three with target six work because the first three is stored before the second is examined. The expected time is linear and space is linear. Reference: `TwoSum` in algorithms.go.
+The slow baseline tries every pair, costing O(n²). When reading 7, the only question about the past is whether `9 - 7 = 2` occurred. A map from value to earlier index answers that question without another scan.
 
-Transfer this idea to event matching, reconciling IDs, or counting pairs. Ask whether you need existence, a count, or actual positions. A set cannot answer how many matching records exist; a frequency map can. An index chosen for one query may discard information required by another.
+![At index 1, value 7 needs complement 2. The map points to the earlier index 0.](figures/two-sum.svg)
 
-## Grouping means inventing a stable identity
+| i | Value | Needed value | Map before lookup | Action |
+| --- | --- | --- | --- | --- |
+| 0 | 2 | 7 | `{}` | Store `2: 0` |
+| 1 | 7 | 2 | `{2: 0}` | Return `[0, 1]` |
 
-To group anagrams, convert each word to a signature. Sorting its letters gives the same signature to words with the same letter multiset. For lowercase English letters, an array of twenty six counts is a comparable Go map key and avoids sorting each word. For a word of length m, sorting costs O(m log m); counting costs O(m) under the fixed alphabet assumption. A signature that stores only which letters appear would wrongly group “abb” and “ab.”
+## Go example: look up before inserting
 
-Real-world analogues include normalizing event identities and deduplicating equivalent requests. Decide what equivalence means first. Case folding, Unicode normalization, and ignoring punctuation are requirements, not automatic improvements. Making a key “more normalized” can merge records that should remain distinct.
+```go
+func PairSum(nums []int, target int) ([2]int, bool) {
+    earlier := make(map[int]int)
+    for i, value := range nums {
+        if j, found := earlier[target-value]; found {
+            return [2]int{j, i}, true
+        }
+        earlier[value] = i
+    }
+    return [2]int{}, false
+}
+```
 
-## Sliding windows maintain a local invariant
+Before iteration i, the map contains only earlier positions. Therefore a hit supplies a distinct index. For `[3, 3]`, target 6, the first 3 is stored and the second finds it. Inserting first would let a single `[3]` match itself. Time is expected O(n), space O(n), assuming arithmetic fits int.
 
-Find the longest contiguous sequence of titles with no repeated ID. A brute-force approach starts at every position and extends until a duplicate appears. The overlap between these searches is wasted work. Instead maintain a left boundary and a map of last seen positions while advancing the right boundary once.
+## Group Anagrams: define equivalence before hashing
 
-Walk through A, B, B, A. After A and B, the window has length two. The second B was at position one, so move left to position two. At the final A, its previous position is zero, already outside the window. Do not move left backward. The update is left equals the larger of current left and previous position plus one. The window now contains B, A, again length two.
+**Problem.** Group `words = ["eat", "tea", "tan", "ate", "nat", "bat"]` by their letter counts. One valid result is `[["eat", "tea", "ate"], ["tan", "nat"], ["bat"]]`. Group order is unspecified, while word order within a group follows input order.
 
-The invariant is that the current window contains no repeated ID. Adding the rightmost element can introduce only a repetition of that element. Moving past its last occurrence repairs the invariant with the smallest necessary movement. Both boundaries only move forward, giving linear time. A nested while loop that shrinks the left side can still be linear because each element leaves once. Reference: `LongestUnique`, using rune positions.
+Sorting each word's letters gives a stable signature. For lowercase ASCII a-z, a `[26]int` count array avoids sorting. "abb" has counts a:1, b:2; "ab" has a:1, b:1. Presence alone would incorrectly treat them as equal.
 
-**A boundary that must not move backward.** In A, B, B, A, assigning left to the previous occurrence plus one without comparing it with the current left boundary is incorrect.
+```go
+func AnagramGroups(words []string) [][]string {
+    groups := make(map[[26]int][]string)
+    for _, word := range words {
+        var key [26]int
+        for i := 0; i < len(word); i++ {
+            key[word[i]-'a']++
+        }
+        groups[key] = append(groups[key], word)
+    }
+    result := make([][]string, 0, len(groups))
+    for _, group := range groups {
+        result = append(result, group)
+    }
+    return result
+}
+```
 
-The final A would move left back to one and reintroduce the duplicate B. A correct boundary only advances. Explain the invariant before quoting a max expression.
+The function assumes every byte is a-z. Arrays are comparable Go map keys; slices are not. Equal count arrays identify equal multisets of letters. Time is O(total input bytes), with fixed-size signature work per word. Arbitrary Unicode requires a different signature and a stated normalization policy.
 
-## Know when a window is not enough
+## Longest unique substring: keep a valid contiguous window
 
-For positive numbers, shrinking a sum window reduces its sum, so you can use directional reasoning for certain threshold tasks. With negative numbers, that assumption disappears. For example, the array three, minus two, two contains a length-three subarray summing to three even though an early sum may suggest shrinking. Do not use a positive-only argument on signed data.
+**Problem.** In `text = "ABBA"`, find the longest substring without a repeated rune. The answer is 2, from "AB" or "BA". A substring uses consecutive positions; sorting would change the problem.
 
-To count subarrays with sum k for arbitrary integers, maintain prefix sum p. A subarray ending here sums to k whenever an earlier prefix equals p minus k. Store counts of earlier prefixes, initialized with zero occurring once to represent a subarray starting at the beginning. Add the number of matches before incrementing the current prefix count. For one, minus one, one with target one, the answer is three. This is hashing of accumulated state, not a window. Reference: `CountSubarrays`.
+Store the latest position of each rune and a left boundary. A repeated rune inside the window forces left past its earlier occurrence. An earlier occurrence outside the window does not force movement.
 
-## Prefix and suffix work without division
+| right | Rune | Previous position | left after repair | Window |
+| --- | --- | --- | --- | --- |
+| 0 | A | Missing | 0 | `"A"` |
+| 1 | B | Missing | 0 | `"AB"` |
+| 2 | B | 1 | 2 | `"B"` |
+| 3 | A | 0 | 2 | `"BA"` |
 
-Product Except Self asks for the product of all values except the current one. Dividing a total product fails at zeros and may violate the prompt. First fill each output position with the product strictly to its left. Walk backward with a running product strictly to its right, multiplying it into the output. On two, three, four, left products are one, two, six; right products supply twelve, four, one; the result is twelve, eight, six.
+```go
+func UniqueLength(text string) int {
+    runes := []rune(text)
+    last := make(map[rune]int)
+    left, best := 0, 0
+    for right, r := range runes {
+        if previous, found := last[r]; found &&
+            previous >= left {
+            left = previous + 1
+        }
+        last[r] = right
+        if length := right-left+1; length > best {
+            best = length
+        }
+    }
+    return best
+}
+```
 
-The empty product is one. That identity makes the edges work without special cases. One zero means only its position may have a nonzero output; two zeros make every output zero. The algorithm is linear with constant auxiliary space excluding output, assuming products fit the chosen numeric type. The deeper pattern is combining summaries from both sides of a position.
+The invariant is that `runes[left:right+1]` contains no duplicate. At the final A, assigning `left = 1` would move backward and reintroduce the two Bs. The guard prevents that. Both boundaries advance only, so time is O(n); rune conversion and the map use O(n) space.
 
-## Deriving an algorithm by deciding what the past must remember
+## Worked example: why an existing prefix adds several answers
 
-Imagine reading a long sequence from left to right. You cannot keep re-reading every earlier element if you want a fast solution. Instead ask: what question will the next element ask about the past? In Two Sum, the next value asks whether its complement appeared earlier. In frequency counting, it asks how many times the same value appeared. In longest unique substring, it asks where its last occurrence was. These are three different summaries of history, even though all can be stored in a map.
+**Problem.** Count all nonempty contiguous subarrays summing to k, allowing negative values. For `nums = [1, -1, 1]`, `k = 1`, the answer is 3: `[1]` at index 0, `[1, -1, 1]`, and `[1]` at index 2. Distinct positions count separately even when values match.
 
-This question helps you invent the state rather than guess a named pattern. A map is a container, not the whole solution. You must choose the key, the meaning of its value, and when an update occurs. Storing only presence loses frequency. Storing only the latest index loses all earlier positions. Either loss is fine when those earlier details cannot affect any future answer. That last sentence is a correctness argument: discarded information must be irrelevant to the remaining task.
+A prefix sum is a cumulative total at a boundary. Define `P[0] = 0` and `P[j] = sum(nums[0:j])`. Then the sum of `nums[i:j]` is `P[j] - P[i]`. It equals k exactly when `P[i] = P[j] - k`.
 
-A window adds a boundary to this reasoning. Your summary describes a current contiguous region rather than the whole prefix. Every time you move the left edge, you must remove that departing element's effect. That is why a count map works for an at-most-two-distinct window. A single boolean would not tell you whether another copy remains inside after one copy leaves.
+For this input, `P = [0, 1, 0, 1]`. The two zero prefixes are at different boundaries. At the final prefix 1, subtracting either earlier zero produces a different subarray summing to 1.
 
-Do not confuse “contiguous” with “sorted.” A viewing session is contiguous because it occupies consecutive events in the original order. Sorting those events changes the session. Two pointers can sometimes work without sorting, but only if the problem supplies another directional property. For a positive sum, moving the right edge increases the sum and moving the left edge decreases it. Signed values remove that property. The method fails because its proof fails, not because a pattern lookup says negative numbers belong somewhere else.
+![At the final boundary, both earlier zero prefixes are valid starts. Each adds one distinct subarray.](figures/prefix-sums.svg)
 
-Prefix sums are a different way of representing a contiguous region. Picture cumulative watch duration as an odometer. The duration between two points is the later reading minus the earlier reading. If the current reading is seven and you want a segment totaling three, you are looking for an earlier reading of four. Store how many earlier readings had each value. Negative durations or adjustments do not break subtraction, so this approach survives where directional window reasoning does not.
+The map stores **prefix value to number of earlier boundaries with that value**, not array value to count. Seed `{0: 1}` for the empty prefix before index 0.
 
-## Worked example: watch a sliding window repair itself
+| i | Running prefix p | Need p-k | Earlier frequency | Total answers |
+| --- | --- | --- | --- | --- |
+| 0 | 1 | 0 | 1 | 1 |
+| 1 | 0 | -1 | 0 | 1 |
+| 2 | 1 | 0 | 2 | 3 |
 
-Find the longest contiguous session containing at most two distinct titles in A, B, A, C, C. The slow baseline starts at every position and scans until a third title appears. Adjacent starts repeat much of the same counting. A moving window reuses those counts.
+At index 1, recording the current prefix 0 changes its frequency from 1 to 2. At index 2, `frequency[0] == 2`, so add **2**, not 1. One start boundary gives the whole array; the other gives only its final element. A set would remember existence but lose this multiplicity.
 
-![When C introduces a third title, two removals repair the window to A, C. The next C can then extend it without another removal.](figures/window.svg)
+## Go example: count matching boundaries before recording this one
 
-Keep a left boundary, a right boundary, and a frequency map for the records between them. Adding the first C gives counts A:2, B:1, C:1. Removing the leftmost A is insufficient: A still has count one, so three distinct titles remain. Remove B next and delete its zero-count entry. Now the window is A, C and is valid again.
+```go
+func SubarrayCount(nums []int, k int) int {
+    frequency := map[int]int{0: 1}
+    prefix, result := 0, 0
+    for _, value := range nums {
+        prefix += value
+        result += frequency[prefix-k]
+        frequency[prefix]++
+    }
+    return result
+}
+```
 
-| New title | Window after repair | Counts | Best length |
+Before lookup, the map describes only earlier boundaries. Recording this boundary first would match a boundary with itself when `k == 0`, counting an empty subarray. For `[0, 0]`, k=0, the correct result is 3: each single zero and both zeros together. The second step legitimately adds 2 earlier starts.
+
+This algorithm takes expected O(n) time and O(n) space. Prefix sums and the answer must fit int; use int64 if constraints require it. A positive-only sliding-window sum argument fails on signed values because removing a negative number increases the sum. Prefix subtraction remains valid regardless of signs.
+
+## Product Except Self: combine both sides of a position
+
+**Problem.** For `nums = [2, 3, 4]`, return `[12, 8, 6]`, where each output excludes its own input element. Division is unavailable, and zeros must work.
+
+Fill each output with the product strictly to its left. Then multiply by the product strictly to its right while walking backward. An empty side contributes 1, the multiplicative identity.
+
+| Position | Left product | Right product | Output |
 | --- | --- | --- | --- |
-| A | A | A:1 | 1 |
-| B | A, B | A:1, B:1 | 2 |
-| A | A, B, A | A:2, B:1 | 3 |
-| C | A, C | A:1, C:1 | 3 |
-| C | A, C, C | A:1, C:2 | 3 |
+| 0 | 1 | `3*4 = 12` | 12 |
+| 1 | 2 | 4 | 8 |
+| 2 | `2*3 = 6` | 1 | 6 |
 
-The repair is a loop, not a single conditional. Its stopping condition is that the number of positive counts is at most two. Each record enters once and leaves at most once, so the total number of boundary moves is linear even though one arrival can trigger several removals. Record the best length only after repair; otherwise an invalid window can become the answer.
+```go
+func ProductsExceptSelf(nums []int64) []int64 {
+    out := make([]int64, len(nums))
+    left := int64(1)
+    for i, value := range nums {
+        out[i] = left
+        left *= value
+    }
+    right := int64(1)
+    for i := len(nums)-1; i >= 0; i-- {
+        out[i] *= right
+        right *= nums[i]
+    }
+    return out
+}
+```
 
-## Worked example: negative numbers change the approach
+For `[2, 0, 4]`, the result is `[0, 8, 0]`; two zeros produce all zeros. Time is O(n), auxiliary space O(1) excluding output, assuming all intermediate products fit int64. The loop order matters: include the current value only after writing that position's strict-side product.
 
-Now count subarrays whose sum is two in the array 2, -1, 1. A shrinking window based on whether the sum is too large is unreliable because removing a negative number increases the sum. The needed relationship is between prefix sums.
+## Worked example: at most two distinct titles
 
-The running prefix sums, including the empty prefix, are 0, 2, 1, 2. A subarray sums to two exactly when its ending prefix is two larger than its starting prefix. Maintain frequencies of earlier prefix sums. Seed zero with frequency one so a subarray starting at the first element can be counted.
+**Problem.** Find the longest contiguous region in `titles = ["A", "B", "A", "C", "C"]` containing at most 2 distinct IDs. The answer is 3. Repetitions are allowed, unlike the unique-substring problem.
 
-At running sum two, look for zero and count the first element. At running sum one, look for minus one and find none. At the final sum two, look for zero again and count the whole array. There are two answers. Insert each current prefix only after looking up the required earlier value; that order prevents counting a zero-length subarray when the target is zero.
+A frequency map describes the current window. After adding C, counts are `{A: 2, B: 1, C: 1}`. Removing one A leaves 3 distinct titles; remove B too to repair the window to `[A, C]`.
 
-The two examples both process an array from left to right, but their proofs are different. The title window can repair a violation by discarding a prefix. Prefix counting instead remembers all earlier boundary values that could complete a valid difference. Recognizing that distinction is more useful than identifying both as map problems.
+![The first C introduces a third distinct title. Removing A once and then B repairs the window.](figures/window.svg)
 
-## Putting the program together: a session with at most two distinct titles
+| Added | Window after repair | Counts | Best |
+| --- | --- | --- | --- |
+| A | `[A]` | `{A: 1}` | 1 |
+| B | `[A, B]` | `{A: 1, B: 1}` | 2 |
+| A | `[A, B, A]` | `{A: 2, B: 1}` | 3 |
+| C | `[A, C]` | `{A: 1, C: 1}` | 3 |
+| C | `[A, C, C]` | `{A: 1, C: 2}` | 3 |
 
-The function takes an ordered sequence of title IDs and returns the longest contiguous length containing at most two distinct titles. It preserves input order and returns zero for an empty sequence. “Contiguous” rules out sorting. We need counts within the active window, a left index, and the best length seen so far.
-
-For each right index, increment the incoming title's count. While the count map contains more than two distinct keys, decrement the title at the left boundary, delete its map entry if the count becomes zero, and advance left. Once the window is valid, compare its length with the best answer. After the final right index, return the best length.
-
-The shrinking loop is essential. One removal may not eliminate a distinct title if another copy remains. For A, A, B, C, adding C creates three distinct titles. Removing the first A leaves another A, so the window is still invalid. Removing the second A leaves B, C and restores the rule. The best length was three, from A, A, B.
-
-The map invariant is exact counts of titles between left and right, inclusive. The validity invariant is checked after shrinking. Left never moves backward, so each event is added once and removed at most once. Total work is linear; the count map holds at most three keys during the immediate repair step for this fixed distinct-title bound.
-
-To return the actual interval, store the best starting position whenever a new best length is found. Define ties: retaining the first best found returns the earliest longest interval. This extension changes output bookkeeping without changing the window invariant. Useful mental tests are an empty sequence, all one title, A-B-A, and A-B-C-B. They exercise absence, duplicates, a valid repeated title, and necessary shrinking.
-
-## Go example: repair the window before measuring it
-
-This complete function implements the earlier at-most-two-title example. `count` contains only positive frequencies, so its length is exactly the number of distinct titles in the window. The input slice is read without mutation.
+## Putting the program together: repair before measuring
 
 ```go
 func LongestTwo(titles []string) int {
@@ -110,8 +194,7 @@ func LongestTwo(titles []string) int {
             }
             left++
         }
-        length := right - left + 1
-        if length > best {
+        if length := right-left+1; length > best {
             best = length
         }
     }
@@ -119,6 +202,6 @@ func LongestTwo(titles []string) int {
 }
 ```
 
-For A, B, A, C, C, the result is three. On the first C, the inner loop removes A once and then B; a single `if` would leave the window invalid. Deleting a zero count is equally important: leaving a zero-valued B entry would make `len(count)` overstate distinct membership. Empty input returns zero because the outer loop never runs.
+Delete zero counts so `len(count)` means the number of distinct IDs. Use a loop because one removal may be insufficient. Measure only after validity is restored. Each element enters and leaves at most once, giving expected O(n) time. For the fixed bound of 2 titles, the map holds at most 3 keys during repair. Empty input returns 0.
 
-Each index enters and leaves at most once, giving expected linear time. With a fixed two-title limit the map holds at most three distinct keys during repair, so its auxiliary entry count is constant. This bound relies on deleting zero counts.
+The methods in this chapter retain different histories. Two Sum needs earlier positions; prefix counting needs earlier frequencies; a window needs only active-region state. Decide which future question the stored state must answer before choosing its representation.

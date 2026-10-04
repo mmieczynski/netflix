@@ -1,142 +1,194 @@
 # Chapter 12 - Complete interview case studies
 
-These cases combine the book's ideas into programs that can be designed entirely in words. Read the brief, pause to reason if you wish, then follow the complete worked design. There is no requirement to type or execute code.
+These cases assemble the earlier techniques into complete programs. Each starts with a brief and a concrete trace, then shows code in dependency order. The first implements an LRU cache with TTL using a simple correct cleanup baseline. The second filters, deduplicates, aggregates, and ranks recent viewing events. You can follow both without executing anything.
 
-## Case one: a metadata cache with recency and expiration
+## Case one: fresh metadata with bounded recency
 
-The brief is to support Put(key, value, lifetime) and Get(key) for video metadata, with a maximum number of resident entries. Reads must never return expired values. Successful reads and writes update recency. When there is no space, remove expired entries before evicting a live least-recently-used entry. A clock is provided so time can be controlled.
+**Brief.** Implement a single-threaded metadata cache with Put(key, value, ttl) and Get(key). Capacity limits resident entries. Never return an expired value. Reads and writes promote live entries. Before evicting a live LRU entry, remove expired residents. Inject the clock.
 
-### Resolve the observable rules
+Choose exact rules: capacity<=0 stores nothing; `now >= deadline` means expired; ttl<=0 removes the key; an overwrite resets deadline and promotes; Get does not extend TTL; empty strings are valid values. Tick arithmetic must fit int64.
 
-Choose these explicit rules for the case. Capacity is nonnegative; zero stores nothing. At the exact deadline, an entry is expired. A nonpositive lifetime removes the key. Overwriting a key changes its value, resets its deadline, and makes it most recent. Get does not extend the deadline. A missing Get does not change recency. A live value can be empty, so Get returns a found flag separately from the value.
+## Worked example: expiration wins over recent access
 
-These questions matter because they change branches and bookkeeping. They are not a request to design a globally distributed cache. Start with one process and one thread, then add concurrency after the state transitions are correct.
+Use capacity 2 and begin at time 0. Put A with TTL 5, B with TTL 20, and Get A. A is now most recent, but it still expires at 5.
 
-### Build a correct baseline first
-
-A map of entries plus a recency list can implement the baseline. Before a capacity-sensitive Put, scan the map and remove every entry whose deadline has passed. This is linear cleanup, but it is correct and easy to explain. Get checks only its own entry's deadline, so it need not scan the map. Identify cleanup as the expensive operation before introducing a heap to optimize it.
-
-For the optimized version, the cache struct contains the key-to-node map, a doubly linked recency list, a deadline min heap, a generation sequence, capacity, and the clock. Each node contains key, value, deadline, generation, and previous/next links. Heap records contain key, deadline, and generation. The same live node participates in identity and recency; the heap can retain stale records that are checked before they act.
-
-### Define helpers around invariants
-
-Detach joins neighboring list nodes. InsertFront adds a detached node immediately after the head marker. Remove unlinks a real node and deletes its map entry. If weights are later added, Remove also subtracts its weight exactly once. DrainExpired reads due heap records and removes a current node only when its generation matches.
-
-Every current map entry must correspond to exactly one real list node. Every real node must have one map entry under its key. Neighbor links must agree. No expired node may be returned. On return from Put, resident count must be within capacity. Heap records are not required to correspond one-to-one with map entries in this lazy design, but stale records must never remove a newer generation.
-
-### Describe Get as an executable sequence
-
-Look up the key. If absent, return missing. If present, read now and compare with the node's deadline. At or beyond the deadline, Remove the node and return missing. Otherwise Detach it, InsertFront it, and return its value with found true. A stale heap record may remain after lazy removal; later cleanup will see that its key is absent or its generation changed and ignore it.
-
-This Get has expected constant map and list work. It does not perform global expiry cleanup. The guarantee is fresh visibility, not that a Get for one key instantly reclaims every other expired key.
-
-### Describe Put and the order of its changes
-
-For zero capacity, retain nothing. For a nonpositive lifetime, remove an existing key and return. For a positive lifetime, read now and drain all due expirations before making a live capacity eviction. Find the key after cleanup. If it exists, update its value and deadline, assign a fresh generation, and promote it. If it does not, create and register a new node at the front. Push a matching deadline record. If count exceeds capacity, Remove the least-recent node at the tail.
-
-After draining due records, count-limited insertion can require at most one live eviction. Draining itself can remove many records. Therefore the complete Put does not have a constant worst-case bound. Honest complexity names the work performed, including old heap records that do not delete anything.
-
-### Walk a boundary case
-
-Capacity is two. At time zero, Put A with lifetime five and B with lifetime twenty. Recency is B, A. Get A makes it A, B. Advance to five and Put C with lifetime twenty. A has expired even though it is most recent. Cleanup removes A first. C can then be inserted without evicting B, leaving C, B.
-
-At time six, overwrite C with lifetime fifty, so its new deadline is fifty-six. At time twenty-five, the old C deadline record is due. Its generation no longer matches, so the new C survives. The same key name is not enough to authorize deletion.
-
-### Add concurrency and loading carefully
-
-A first concurrency extension uses one mutex around each complete public operation. Get takes an exclusive lock because it promotes or removes nodes. The lock protects map/list/generation consistency, not just the map. Helpers assume the caller holds the lock rather than locking recursively.
-
-If metadata is loaded from a slow service on a miss, do not hold this global mutex through the service call. Create or join per-key in-flight work under the lock, release the lock while fetching, then publish or complete the result under a protected transition. Release waiters on both success and failure. If invalidation occurred during the fetch, a separate generation check can prevent an obsolete result from repopulating the key.
-
-### Tests you can reason through without running
-
-Capacity zero must remain empty. A stored empty value must still be a hit. Expiry exactly at the deadline must miss. Refresh before an old deadline must survive old cleanup. Overwrite must not create duplicate list nodes. An expired most-recent entry must be removed before a live least-recent eviction under this policy. Repeated refreshes must be included in memory analysis because their stale heap records may accumulate.
-
-These checks cover visibility, structural consistency, and lifecycle identity. Separating those categories helps locate a missing invariant when a requirement changes.
-
-## Case two: recent viewing totals and ranked recommendations
-
-The brief is to accept a finite collection of viewing events and return the top k titles by total watch duration in a recent window. Each event has event ID, user ID, title ID, duration, and event timestamp. Redeliveries with the same event ID count once. Tied totals rank by ascending title ID. The caller supplies now and window width.
-
-### Define the batch contract
-
-Use the interval strictly after now minus width and at or before now. Future events are excluded. The first version assumes repeated IDs have identical payloads. Durations are positive; choose to reject invalid duration records rather than let them silently affect totals. k at or below zero gives an empty result. Input order is arbitrary and preserved. This is a batch query, so event order need not support a queue.
-
-The program separates validation, filtering, identity, aggregation, and ranking. This separation helps you explain a change without rewriting the whole solution. If the prompt wants invalid records skipped instead of rejected, that changes validation policy while leaving the valid-data aggregation argument intact.
-
-### Choose fields and helper responsibilities
-
-A seen-event set suppresses duplicates. A totals map accumulates duration by title. A result record contains title ID and total duration. A comparison helper orders larger totals first, then smaller IDs. The main function validates records, applies the window rule, suppresses duplicates among relevant identical deliveries, and adds each accepted contribution to the totals map.
-
-Because duplicate payloads are assumed identical, filtering an out-of-window delivery before deduplication cannot hide an in-window version of that same event. If duplicate IDs can have different timestamps or values, this reasoning fails. You then need a canonical record policy, conflict rejection, or a defined correction model. State that changed requirement before modifying the code structure.
-
-### Use a simple ranking baseline
-
-Collect the totals map into a slice of result records. Sort by the complete comparison and return up to k. If n is events and u is distinct qualifying titles, expected scan work is linear in n, sorting is u log u, and retained identity plus aggregation state can be linear in n plus u. A map being fast does not make its memory free.
-
-For small k, use a heap containing at most k winners and exposing the worst retained one. Compare every unique title's final total with that root. Sort the surviving winners before returning. This saves ranking work but does not remove the seen-event set or totals map. Do not claim the entire algorithm now needs only k memory.
-
-### Execute the example mentally
-
-At now ten with width five, event e1 gives A three duration at time six. Event e2 gives A four at nine and is delivered twice. Event e3 gives B seven at ten. Event e4 gives C one hundred at five. The interval excludes time five, so C contributes nothing. A totals seven because e2 counts once. B also totals seven. A wins the ID tie, so the ranking is A followed by B.
-
-An event at eleven is in the future and is excluded. An empty collection gives no titles. k larger than the number of qualifying titles returns all of them without inventing missing positions. These observations follow directly from the contract and can be checked without executing a program.
-
-### Change the input to a stream
-
-Now events arrive in nondecreasing timestamp order, and queries also move forward in time. Retain a queue of accepted contributions. Before answering at now, remove contributions at or before the cutoff and subtract their durations from their titles' aggregates. Maintain counts as well as sums if needed to distinguish a title with no remaining events. Delete an aggregate when its last retained event leaves.
-
-The queue works because expiry order matches event-time order. If late events are allowed, insertion order no longer proves that expired contributions form a prefix. Define a bounded-lateness policy, an ordered structure, or a separate event-time processing rule. Do not silently accept arbitrary late events into a FIFO queue.
-
-Deduplication retention is not automatically identical to the ranking window. If the sender can redeliver an old event after its identity marker has expired, the program needs to decide whether the event is still eligible and whether it can be counted again. For corrections with reused IDs, you may need to remove an old contribution before adding its replacement. Identity, event eligibility, and processing lifetime remain separate decisions.
-
-### Understand score decreases
-
-Suppose A is the current winner and B is second. A's oldest contribution expires, reducing its score below B. A heap containing only A cannot discover B if B has been discarded from all other state. Keep full active aggregates and rank on query for a correct baseline, or maintain an indexed ordered representation covering all candidates. A static top-k selection proof cannot be reused unchanged for scores that decrease.
-
-### Explain the final program to an interviewer
-
-Begin with the batch contract and the simplest correct scan-and-sort program. State which map captures identity and which captures aggregation. Show the boundary example and deterministic tie rule. Then explain the small-k optimization and its true memory bound. For streaming, introduce reversible contributions, ordered expiry, and the limitation of winner-only state. Each extension has a specific changed operation and invariant.
-
-
-## Visual synthesis: three indexes, one cache entry
-
-The combined cache case has three different reasons to locate an entry. A Get uses key identity. Capacity management uses recency. Expiration cleanup uses deadline order. The diagram separates those queries while keeping one authoritative current entry per key.
-
-![Three views cooperate: the key map finds the current node, the recency list finds a capacity victim, and the deadline heap proposes expiry candidates.](figures/combined.svg)
-
-The map and recency list have one-to-one membership. The heap deliberately does not: refreshes can leave stale deadline records. Treating every heap record as a resident entry would make the implementation and its space analysis disagree. Generation checking is the bridge from a historical deadline record to the current node.
-
-## Worked example: expiration wins over recency
-
-Capacity is two. At time zero write A with deadline five and B with deadline twenty. Read A, making it most recent. At time five, insert C with deadline twenty-five. A is expired, so cleanup removes A before any live capacity eviction. B survives even though B was least recent just before the operation.
-
-| Stage at time 5 | Recency, newest first | Live residents | Action |
+| Time | Operation | MRU to LRU | Deadlines |
 | --- | --- | --- | --- |
-| Before cleanup | A, B | B | A expired but still stored |
-| After cleanup | B | B | Remove A from map and list |
-| After inserting C | C, B | C, B | No live eviction needed |
+| 0 | Put A="HD", TTL 5 | `[A]` | `{A:5}` |
+| 0 | Put B="UHD", TTL 20 | `[B, A]` | `{A:5, B:20}` |
+| 0 | Get A | `[A, B]` | Unchanged |
+| 5 | Put C="HDR", TTL 20 | `[C, B]` | `{B:20, C:25}` |
+| 6 | Put C="new", TTL 50 | `[C, B]` | `{B:20, C:56}` |
+| 25 | Get C | `[C, B]` | Return `("new", true)` |
 
-This trace distinguishes two independent meanings of old: old by last access and old by deadline. A single ordered list generally cannot answer both questions. It also illustrates why observable policy determines operation order. Evicting B before cleaning A would satisfy the entry-count limit but violate this case's expired-first rule.
+At time 5, removing only the LRU tail B would violate the expired-first rule. A is expired at the front. Freshness and recency have different orderings.
 
-## Worked example: reverse a contribution before reranking
+![Identity, recency, and deadline indexes answer different questions about the same cache entries.](figures/combined.svg)
 
-For the viewing-statistics case, use a ten-second window and three events: e1 contributes four to A at time two; e2 contributes six to B at time eight; e3 contributes three to A at time nine. A repeated delivery of e2 contributes nothing extra. At time nine, totals are A:7 and B:6, so A ranks first.
+The diagram shows the heap-based optimization from chapter 7. The complete implementation below deliberately uses a map scan for cleanup, so its correctness does not depend on a third index. That scan is the operation we would later optimize.
 
-At time twelve, e1 falls on the excluded left boundary. Subtract four from A, leaving A:3 and B:6; B now ranks first. A heap containing only the former winner A cannot infer this change from its own state. A simple correct live implementation retains all current title totals and recomputes ranking when queried. An optimized design needs an update mechanism that keeps ranking synchronized with both additions and expirations.
+## Go example: state and constructor
 
-| Query time | A total | B total | Winner |
-| --- | --- | --- | --- |
-| 9 | 7 | 6 | A |
-| 12 | 3 | 6 | B |
-| 18 | 3 | 0 | A |
-| 19 | 0 | 0 | No active title |
+A node has stable identity, value, deadline, and two list neighbors. The map and list must describe the same residents. Sentinels are never residents.
 
-At time eighteen, the event at eight is excluded; at nineteen, the event at nine is excluded. These equalities are useful tests because they expose inconsistent boundary rules between ingestion, expiration, and querying. Combining components successfully means their contracts agree, not merely that each component works in isolation.
+```go
+type metadataNode struct {
+    key, value string
+    deadline int64
+    prev, next *metadataNode
+}
 
-## Go example: compose filtering, identity, and aggregation
+type MetadataCache struct {
+    capacity int
+    clock func() int64
+    byKey map[string]*metadataNode
+    head, tail *metadataNode
+}
 
-This complete batch aggregation core assumes positive durations, identical payloads for duplicate IDs, a positive window, and arithmetic fitting int64. Invalid-input validation belongs before this core. Input order is arbitrary. Its output is the totals map consumed by the ranking stage, not the final top-k list.
+func NewMetadataCache(capacity int,
+    clock func() int64) *MetadataCache {
+    if capacity < 0 {
+        capacity = 0
+    }
+    head, tail := &metadataNode{}, &metadataNode{}
+    head.next, tail.prev = tail, head
+    return &MetadataCache{
+        capacity: capacity, clock: clock,
+        byKey: make(map[string]*metadataNode),
+        head: head, tail: tail,
+    }
+}
+```
+
+The clock must be non-nil and monotone. No mutex is present; callers serialize operations. This is a complete count-and-TTL baseline, not a distributed cache.
+
+## Helpers update one invariant at a time
+
+Unlink updates only neighbor links. Promote unlinks an already resident node before inserting it at the front. Remove updates both list and map.
+
+```go
+func unlinkMetadata(n *metadataNode) {
+    n.prev.next = n.next
+    n.next.prev = n.prev
+}
+
+func (c *MetadataCache) front(n *metadataNode) {
+    first := c.head.next
+    n.prev, n.next = c.head, first
+    c.head.next, first.prev = n, n
+}
+
+func (c *MetadataCache) remove(n *metadataNode) {
+    unlinkMetadata(n)
+    delete(c.byKey, n.key)
+}
+
+func (c *MetadataCache) expire(now int64) {
+    for _, n := range c.byKey {
+        if n.deadline <= now {
+            c.remove(n)
+        }
+    }
+}
+```
+
+Deleting the current map entry during Go map iteration is allowed. The scan may remove several list positions; stable node pointers make that safe. Each removal preserves the neighbors' connection. Removed nodes are no longer used, so clearing their own links is optional for this implementation.
+
+## Get: check freshness before promoting
+
+```go
+func (c *MetadataCache) Get(key string) (string, bool) {
+    n, found := c.byKey[key]
+    if !found {
+        return "", false
+    }
+    if c.clock() >= n.deadline {
+        c.remove(n)
+        return "", false
+    }
+    unlinkMetadata(n)
+    c.front(n)
+    return n.value, true
+}
+```
+
+A hit promotes without changing deadline. A miss does not change recency; an expired lookup removes that one resident. Expected time is O(1), and an empty value still returns true.
+
+## Put: cleanup before live capacity eviction
+
+```go
+func (c *MetadataCache) Put(key, value string,
+    ttl int64) {
+    if ttl <= 0 {
+        if n, found := c.byKey[key]; found {
+            c.remove(n)
+        }
+        return
+    }
+    if c.capacity == 0 {
+        return
+    }
+    now := c.clock()
+    c.expire(now)
+    n, found := c.byKey[key]
+    if found {
+        unlinkMetadata(n)
+    } else {
+        n = &metadataNode{key: key}
+        c.byKey[key] = n
+    }
+    n.value, n.deadline = value, now+ttl
+    c.front(n)
+    if len(c.byKey) > c.capacity {
+        c.remove(c.tail.prev)
+    }
+}
+```
+
+At time 5, expire removes A regardless of its recency, then C fits beside B. An overwrite reuses its node. Completed Put satisfies count<=capacity and no resident was expired at its sampled now. The map/list correspondence remains one-to-one.
+
+The baseline Put is O(n) because it scans residents. Space is O(capacity), Get expected O(1). A deadline heap changes the cleanup cost to due-record work plus heap updates; generations must guard stale records. A used-weight counter changes count capacity into weighted capacity and may require several live evictions.
+
+## Checking the complete cache
+
+A controllable clock makes these tests concrete:
+
+| Input/transition | Required outcome |
+| --- | --- |
+| Capacity 0; Put A | Always missing |
+| Put A="" with live TTL | `("", true)` |
+| Get at exact deadline | Missing; unlink and delete |
+| Refresh before old deadline | New deadline governs reads |
+| Repeated Put A | One A node only |
+| Expired MRU; insert C | Expired A leaves before live B |
+| Hit already-first node | List remains connected |
+
+For concurrency, wrap each complete method in one exclusive lock. For backend loading, use chapter 7's SharedLoader outside the cache lock and recheck freshness inside shared work. Invalidation during a load needs a version policy. These follow-ups add explicit guarantees; they do not change the meaning of TTL silently.
+
+## Case two: recent viewing totals and top titles
+
+**Brief.** Given a batch of events, return the top k titles by total recent watch minutes. Event ID deduplicates redelivery. Include event times in `(now-window, now]`; exclude future events. Rank descending total, then ascending title ID. Input order is arbitrary and preserved.
+
+Repeated IDs must have identical payloads. Durations are positive, all sums fit int64, and window>0. The public pipeline rejects invalid duration/window input. The event type omits user because this exercise ranks the supplied cohort; per-user ranking would require grouping or filtering by user too.
+
+## Worked example: filter, deduplicate, then aggregate
+
+Set now=10, window=5, k=2:
+
+| Event ID | Title | Time | Minutes | Contribution |
+| --- | --- | --- | --- | --- |
+| e1 | A | 6 | 3 | A:+3 |
+| e2 | A | 9 | 4 | A:+4 |
+| e2 again | A | 9 | 4 | Duplicate; +0 |
+| e3 | B | 10 | 7 | B:+7 |
+| e4 | C | 5 | 100 | Exact left boundary; +0 |
+| e5 | D | 11 | 20 | Future; +0 |
+
+Totals are `{A: 7, B: 7}`. A wins the ID tie, so the result is `[(A, 7), (B, 7)]`. Filtering before deduplication is safe only because identical IDs carry identical timestamps and payloads. Conflicting redeliveries would need a canonicalization or rejection rule.
+
+![The batch pipeline validates, filters by time, resolves event identity, totals by title, and ranks the output.](figures/watch-pipeline.svg)
+
+## Go example: preserve identity and aggregate contributions
 
 ```go
 type WatchEvent struct {
@@ -162,6 +214,51 @@ func RecentTotals(events []WatchEvent,
 }
 ```
 
-For e1=A4 at two, e2=B6 at eight, e3=A3 at nine, and a repeated e2, querying at twelve with width ten returns A:3 and B:6. e1 is exactly on the excluded left boundary. The second e2 is ignored before aggregation, so B does not become twelve. A future event is excluded even if its ID has not appeared before.
+This helper assumes validated positive durations and window. It does not mutate input. Each relevant logical event contributes exactly once because its ID is recorded before another delivery can add it. The set is by event ID; the totals map is by title ID. Confusing those keys either drops distinct views or double-counts redelivery.
 
-Filtering before deduplication is safe here because duplicate payloads are identical. If an ID can arrive with a corrected timestamp or duration, a canonical-version rule must precede this core. The expected work is linear in input events, with space for distinct accepted event IDs and titles. Unlike the streaming design, a new batch query rebuilds these summaries and therefore needs no inverse operation for expiration.
+## Putting the program together: validate and use the shared comparator
+
+```go
+func RecentRanking(events []WatchEvent,
+    now, window int64, k int) ([]Candidate, bool) {
+    if window <= 0 {
+        return nil, false
+    }
+    for _, event := range events {
+        if event.Minutes <= 0 {
+            return nil, false
+        }
+    }
+    if k <= 0 {
+        return nil, true
+    }
+    totals := RecentTotals(events, now, window)
+    candidates := make([]Candidate, 0, len(totals))
+    for title, minutes := range totals {
+        candidates = append(candidates,
+            Candidate{ID: title, Score: minutes})
+    }
+    return TopTitles(candidates, k), true
+}
+```
+
+TopTitles and Candidate come from chapter 10; their definitions are part of the same example package. The boolean here reports valid input, not whether an event exists. Validation runs even for k<=0 under this contract. An empty valid batch returns an empty ranking; k larger than available titles returns all.
+
+For n deliveries and u live titles, expected scan work is O(n), sorting O(u log u), and auxiliary state O(n+u). A k-winner heap reduces selection work but does not eliminate the deduplication set or totals map.
+
+## Turning the batch into a stream
+
+A batch can scan arbitrary order, but a FIFO streaming expiry queue requires monotone event times. Keep each accepted contribution `(ID, title, time, minutes)` so expiration can subtract it from the title's aggregate. Deduplication retention must cover the same query horizon or another explicitly defined horizon.
+
+## Worked example: remove the contribution before reranking
+
+At now=9, width=10, A has events `(time 0, minutes 10)` and `(time 9, minutes 3)`, while B has `(time 8, minutes 6)`. Totals are `{A: 13, B: 6}` and top 1 is A. At now=10, A's time-0 event reaches the excluded boundary and expires.
+
+| State | A total | B total | Top 1 |
+| --- | --- | --- | --- |
+| Before expiry | 13 | 6 | A |
+| Subtract A's old 10 | 3 | 6 | B |
+
+Chapter 10's RollingStats retains the contribution to reverse. Ranking all current aggregates is a simple exact baseline. A winner-only heap cannot recover B if it discarded B earlier; dynamic score decreases require retaining outsiders too.
+
+Both cases follow one method: state the result and boundaries, build a correct baseline, show every mutation on a tiny input, then identify the specific expensive step to optimize. The code and trace must agree on the same contract before any complexity improvement is useful.

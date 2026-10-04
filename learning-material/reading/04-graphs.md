@@ -1,99 +1,31 @@
-# Chapter 4 — Trees graphs and dependencies
+# Chapter 4 - Trees, graphs, and dependencies
 
-A graph problem asks how information moves through relationships. Make vertices, edges, and visitation rules explicit.
+A graph models relationships rather than just a sequence. This chapter asks three different questions: how far away is a vertex, which vertices are connected, and when is a dependent job ready? All use a frontier of pending work, but the rule for adding work determines the algorithm.
 
-## Recognizing the graph hiding in a prompt
+## Define vertices, edges, and the result
 
-Movies linked by shared actors form a graph. Encoding jobs that depend on source assets form a directed graph. Adjacent land cells form an implicit graph. A filesystem directory structure is a tree if every node has one parent and links cannot create cycles. Start by defining the vertices and whether edges are directed, weighted, or generated from neighboring coordinates.
+For recommendation links, a vertex is a title and an edge means a direct connection. For jobs, an edge from A to B means A must finish before B. For a grid, a vertex is a cell and edges join allowed neighboring cells. State whether edges are directed, weighted, or implicit.
 
-An adjacency list stores each vertex's neighbors. It uses O(V plus E) space and supports traversals in O(V plus E) time. An adjacency matrix uses quadratic space but gives constant time edge existence queries. Sparse interview graphs usually favor lists. A grid already represents its vertices; you do not need to allocate an explicit object for every edge.
+The running graph is `edges = {A: [B, C], B: [D], C: [D], D: []}`. It has a shared descendant D. That is not a cycle: there is no path returning to its starting vertex.
 
-## Breadth first search and shortest hops
+![The diamond graph offers two routes from A to D. Each edge costs one hop.](figures/graph.svg)
 
-To find the fewest recommendation links from one movie to another, enqueue the start and mark it discovered. Pop in first-in-first-out order. Enqueue unvisited neighbors with distance one greater. The queue processes all distance-zero nodes, then distance-one nodes, then distance-two nodes. Therefore the first discovery of a vertex has the shortest number of edges.
+An adjacency list uses O(V+E) space and lets a traversal inspect each vertex and edge once. A matrix uses O(V²) space but offers O(1) edge-existence checks. A grid already supplies its adjacency rules, so storing a separate edge object for every neighbor is unnecessary.
 
-Mark on enqueue, not on dequeue, so two parents do not add the same vertex repeatedly. Keep a parent map if you must reconstruct the actual path. An empty queue before reaching the destination means unreachable. Breadth first search finds shortest paths when each edge has equal cost. If edges represent different download durations, shortest hops may not mean shortest time.
+## Worked example: BFS gives shortest hop counts
 
-For nonnegative weighted edges, Dijkstra's algorithm uses a min heap of tentative total distances. When removing a heap record, skip it if its distance is no longer the best recorded one. Relax each outgoing edge by checking whether the current distance plus its cost improves the neighbor. With stale heap entries, a typical bound is O((V plus E) log E), often written O((V plus E) log V) for simple graphs. Negative edges break the greedy finalization argument. Dijkstra is a useful optional extension, not the first implementation to master.
+**Problem.** Starting at A, return the minimum number of edges to each reachable vertex. The answer is `{A: 0, B: 1, C: 1, D: 2}`. All edges cost one hop.
 
-**Failure case.** A one-edge route costing ten is more expensive than two edges costing one each.
+A first-in-first-out queue processes distance 0, then distance 1, then distance 2. Mark a vertex when adding it, so two parents cannot enqueue it twice.
 
-The direct route has one edge but cost ten. A to C to B has two edges and cost two. State whether the task minimizes edge count or total weight before choosing a traversal.
-
-## Depth first search and connected components
-
-Number of Islands asks how many connected land components exist. Scan every cell. On an unvisited land cell, increment the component count and explore all reachable land with a stack or recursion. Mark visited before pushing neighbors. The outer scan finds component entry points; the traversal prevents counting the same island twice. Clarify four-way versus diagonal adjacency and whether mutating the grid is allowed.
-
-For a large grid, an explicit stack avoids relying on deep recursion. Each cell is visited once and each has a constant number of neighbors, so time is O(rows times columns). A separate visited structure uses the same order of extra space. Mutating land to water avoids a separate visited map but the traversal stack can still grow linearly.
-
-## Tree invariants can be global
-
-Validating a binary search tree by comparing each node only with its children is insufficient. A value of twelve can be the right child of a five inside the left subtree of a ten: its local relationship to five is fine but its relationship to ten is wrong. Pass allowable lower and upper bounds down the recursion, or perform an inorder traversal and verify strictly increasing values when duplicates are forbidden.
-
-Inorder means visit left subtree, then node, then right subtree. Keep a previous value and a boolean saying whether it exists; avoid using the smallest integer as an uninitialized sentinel. A tree traversal costs O(n) time and O(h) call-stack space, with h potentially n for a skewed tree. Level order traversal is simply BFS with either a captured queue length per level or explicit distances.
-
-## Dependencies and cycles
-
-For job prerequisites, direct each edge from prerequisite to dependent. Count each vertex's incoming edges. Put all zero-indegree vertices in a queue; remove one, output it, and decrement its dependents. A dependent becomes ready when its indegree reaches zero. If you output fewer than V vertices, the remaining subgraph contains a cycle. This is Kahn's topological sort.
-
-With A before C and B before C, A and B may appear in either order, but C must follow both. If deterministic output is required, use a min heap of ready IDs rather than relying on map iteration. Clarify whether duplicate edges are distinct requirements or should be deduplicated. A consistent adjacency list and indegree count can accommodate duplicates, but mismatching their treatment is a bug.
-
-To clone a graph, memoize original pointer to clone pointer. Create and register the clone before recursively cloning neighbors, otherwise a cycle causes infinite recursion. Reuse that clone whenever the original is encountered again. A map keyed only by a displayed label is unsafe if different vertices may share labels.
-
-## Think about the frontier before thinking about recursion
-
-Every traversal has discovered territory and territory still waiting to be explored. The waiting territory is its frontier. Breadth first search chooses the oldest discovered work next; depth first search chooses the newest unfinished work next. That small policy difference changes the order in which facts become known. Neither traversal needs a particular product story: movies, cities, cells, and jobs can all be vertices.
-
-Consider A connected to B and C, with B connected to D. Breadth first search discovers B and C one step from A before it explores D two steps away. The queue preserves layers. Depth first search might follow A, B, D before returning to C. That is useful when exploring an entire branch, but the first route it finds is not necessarily the shortest route in edge count. To choose between them, identify the property you need from the discovery order.
-
-Visited state is not just a performance trick. It gives a meaning to discovery. Without it, two nodes pointing at one another can generate work forever. For a queue traversal, marking a node when it enters the queue means it has already claimed a place on the frontier. Waiting until removal allows multiple parents to enqueue it. In a graph-cloning problem, a similar early registration says that an original node already has a clone identity, even if that clone's neighbors are not fully built yet.
-
-Dependency processing uses a different notion of readiness. A discovered job is not necessarily runnable. It becomes ready only after all its prerequisite edges have been accounted for. Indegree records the number still blocking it. Removing a ready job reduces that count for its dependents. If progress stops while unresolved jobs remain, you have a structural obstruction: every remaining job still needs something inside the unresolved group. In a finite directed graph, following those dependencies must eventually revisit a node, exposing a cycle.
-
-Do not confuse shared descendants with cycles. If A leads to B and C, and both lead to D, D is shared but the graph can still be acyclic. A traversal needs visitation to avoid duplicate work; cycle detection needs evidence of a path that returns to an active ancestor, or equivalent indegree reasoning. “I saw this node before” alone is not enough to diagnose a cycle in a directed graph.
-
-## Worked example: two routes to the same vertex
-
-Consider edges A to B, A to C, B to D, and C to D. Starting at A, find the minimum number of edges to D. Breadth-first search processes the frontier in layers. The queue is not just storage for pending work; its order represents increasing distance from the start.
-
-![Every edge costs one hop. B and C both have edges to D, but only the first discovery enqueues D.](figures/graph.svg)
-
-| Removed from queue | Newly discovered | Queue afterward |
+| Removed | New discoveries | Pending queue |
 | --- | --- | --- |
-| A, distance 0 | B and C, distance 1 | B, C |
-| B, distance 1 | D, distance 2 | C, D |
-| C, distance 1 | None; D already discovered | D |
-| D, distance 2 | None | Empty |
+| A | B:1, C:1 | `[B, C]` |
+| B | D:2 | `[C, D]` |
+| C | None; D is known | `[D]` |
+| D | None | `[]` |
 
-Mark a vertex when it is enqueued. When C examines its edge to D, D is already discovered even though it has not yet been removed from the queue. Marking only on removal allows duplicate queue entries. Save D's predecessor as B on first discovery; following predecessors backward reconstructs A, B, D. A, C, D is equally short, so a requirement for deterministic paths may also specify neighbor order.
-
-The distance argument assumes every edge has equal cost. If A to B costs ten while A to C and C to B each cost one, the one-edge route is not cheapest. The frontier must then be ordered by accumulated cost rather than by hop layer, as in Dijkstra's algorithm for nonnegative weights.
-
-## Worked example: a dependency queue means something else
-
-Interpret the same diamond as build dependencies: A must finish before B and C; both B and C must finish before D. The initial indegrees are A:0, B:1, C:1, D:2. The ready queue starts with A. Completing A makes B and C ready. Completing B reduces D to one unfinished prerequisite; it does not release D. Completing C reduces D to zero and releases it.
-
-The queue now means all prerequisites are satisfied, not minimum distance. This is why naming the container is only half a solution. Its membership rule carries the correctness argument.
-
-Add a dependency D to A. Every vertex now has a positive indegree, so no work is initially ready. The process finishes with fewer completed vertices than exist in the graph, proving the dependency graph contains a cycle. In a graph with an independent vertex E, E could finish while the cyclic component remains stuck. An empty final queue by itself therefore says nothing; compare completed count with total count.
-
-Across both uses, store every declared vertex, including isolated ones. Building the vertex set only from outgoing edges can silently lose a leaf or a standalone job.
-
-## Putting the program together: a prerequisite planner
-
-The function takes a number of jobs and pairs of prerequisite and dependent IDs. It returns a valid execution order and a success flag. IDs lie in a specified range; invalid endpoints fail validation. A cycle means no complete order exists. Independent jobs may appear in any order unless the contract requests deterministic tie-breaking.
-
-Create an adjacency slice for outgoing dependency edges and an integer indegree slice. For each validated pair, append the dependent to the prerequisite's neighbors and increment the dependent's indegree. The counts and edge list must treat duplicate pairs consistently. Initialize a queue with every zero-indegree job, including isolated jobs.
-
-Use a head index to consume that queue. Each removed job becomes the next output. For every dependent, decrement its outstanding count; when the count reaches zero, append that dependent to the queue. No other condition makes a job ready. After the queue is exhausted, compare output size with the total number of jobs. Equal means success; smaller means a cycle prevented completion.
-
-For A before C and B before C, initial counts are zero for A and B and two for C. Finishing A drops C to one. Finishing B drops C to zero and makes it ready. A, B, C is valid, as is B, A, C. Add an isolated D and it must still appear somewhere. Add C before A and a dependency cycle now blocks at least A and C.
-
-Validation, graph construction, readiness processing, and final completeness checking are useful conceptual stages. Their combined work is linear in vertices plus edges. If the smallest available job must always be chosen, replace the ready queue with a min heap, accepting logarithmic ready-set operations. This changes tie policy rather than dependency meaning.
-
-## Go example: record discovery when enqueuing
-
-This complete BFS returns minimum hop counts from a start vertex. Missing adjacency entries mean no outgoing edges. Vertex IDs are strings, and edges have equal cost. The slice is a queue with a head index, avoiding removal from its front.
+## Go example: record discovery on enqueue
 
 ```go
 func HopDistances(edges map[string][]string,
@@ -114,6 +46,210 @@ func HopDistances(edges map[string][]string,
 }
 ```
 
-In the diamond graph, B records D's distance as two before C is processed. C then sees D already in the map and does not enqueue it again. The map doubles as the visited set and the result, so there is no second membership structure to keep synchronized. A cycle back to A also stops because A was registered at initialization.
+The distance map also acts as the visited set. An unreachable vertex is absent; distance 0 belongs to the start. Missing adjacency entries mean no outgoing edges. Work is O(V+E) over reachable vertices, with O(V) additional space. Save a parent on first discovery if the requested output is the actual path, such as `[A, B, D]`.
 
-An unreachable vertex is absent from the result; distance zero belongs to the start and does not mean unreachable. The caller must use the same comma-ok lookup introduced in chapter one. Work is linear in reachable vertices and their outgoing edges. The head-index queue retains its backing array until this traversal finishes; its maximum retained storage is linear in discovered vertices.
+BFS minimizes edge count, not arbitrary cost. A direct A-to-B edge of cost 10 loses to A-to-C-to-B with costs 1 and 1. For nonnegative weights, Dijkstra orders the frontier by tentative total cost in a min heap. It relaxes edges and skips stale heap distances. Negative weights invalidate its usual finalization argument.
+
+## Trees: BFS can group by level
+
+**Problem.** Return levels of a binary tree with root 10, children 5 and 15, and a right child 12 beneath 5. The level output is `[[10], [5, 15], [12]]` regardless of whether the tree is a valid search tree.
+
+Capture queue length at the beginning of each level. Nodes appended during that level belong to the next one.
+
+```go
+type TreeNode struct {
+    Value int
+    Left, Right *TreeNode
+}
+
+func TreeLevels(root *TreeNode) [][]int {
+    if root == nil {
+        return nil
+    }
+    queue := []*TreeNode{root}
+    var levels [][]int
+    for head := 0; head < len(queue); {
+        end := len(queue)
+        var level []int
+        for head < end {
+            n := queue[head]
+            head++
+            level = append(level, n.Value)
+            if n.Left != nil {
+                queue = append(queue, n.Left)
+            }
+            if n.Right != nil {
+                queue = append(queue, n.Right)
+            }
+        }
+        levels = append(levels, level)
+    }
+    return levels
+}
+```
+
+Each node enters once: O(n) time. This simple head-index queue retains O(n) references until completion. A compacting queue can reduce retained storage toward maximum level width, but is unnecessary for a small traversal. The input must be a tree; cycles need visited state.
+
+## BST validation: local comparisons are insufficient
+
+**Problem.** Is the same tree a binary search tree, with every left descendant smaller and every right descendant larger? The answer is false. The value 12 is greater than its parent 5, but belongs to the left subtree of 10 and must also be less than 10.
+
+![Node 12 satisfies its local parent comparison but violates the bound inherited from root 10.](figures/bst-bound.svg)
+
+Inorder traversal visits left, node, right. A valid BST with no duplicates produces strictly increasing values. Keep both the previous value and a flag saying whether it exists; the smallest integer is a valid value, not a safe sentinel.
+
+```go
+func IsBST(root *TreeNode) bool {
+    previous, havePrevious := 0, false
+    var visit func(*TreeNode) bool
+    visit = func(n *TreeNode) bool {
+        if n == nil {
+            return true
+        }
+        if !visit(n.Left) {
+            return false
+        }
+        if havePrevious && n.Value <= previous {
+            return false
+        }
+        previous, havePrevious = n.Value, true
+        return visit(n.Right)
+    }
+    return visit(root)
+}
+```
+
+The counterexample visits `[5, 12, 10, 15]`; 10 fails after 12. Time is O(n), recursion space O(h) for tree height h, possibly n in a chain. Passing inherited lower and upper bounds is an equivalent approach.
+
+## Connected components: count islands with DFS
+
+**Problem.** Count islands in `grid = ["110", "010", "001"]`, joining land only up, down, left, and right. The answer is 2. The final corner is diagonally adjacent but disconnected under this rule.
+
+![Four-way neighbors form one three-cell island and one isolated corner. Diagonal contact does not connect them.](figures/islands.svg)
+
+Scan every cell. Each unvisited land cell starts one new component; a stack explores and marks its entire component. This version mutates land `'1'` to water `'0'`, so callers needing preservation must copy each row first.
+
+```go
+func IslandCount(grid [][]byte) int {
+    if len(grid) == 0 || len(grid[0]) == 0 {
+        return 0
+    }
+    rows, cols := len(grid), len(grid[0])
+    directions := [][2]int{{1, 0}, {-1, 0},
+        {0, 1}, {0, -1}}
+    count := 0
+    for r := 0; r < rows; r++ {
+        for c := 0; c < cols; c++ {
+            if grid[r][c] != '1' {
+                continue
+            }
+            count++
+            grid[r][c] = '0'
+            stack := [][2]int{{r, c}}
+            for len(stack) > 0 {
+                p := stack[len(stack)-1]
+                stack = stack[:len(stack)-1]
+                for _, d := range directions {
+                    nr, nc := p[0]+d[0], p[1]+d[1]
+                    if nr < 0 || nr >= rows ||
+                        nc < 0 || nc >= cols ||
+                        grid[nr][nc] != '1' {
+                        continue
+                    }
+                    grid[nr][nc] = '0'
+                    stack = append(stack, [2]int{nr, nc})
+                }
+            }
+        }
+    }
+    return count
+}
+```
+
+Assume a rectangular grid containing only '0' and '1'. Mark before pushing to avoid duplicate work. Each cell is visited once, so time is O(rows*cols); the stack can use O(rows*cols) space even though no separate visited array is allocated.
+
+## Worked example: a dependency queue means ready, not nearby
+
+**Problem.** Execute jobs with prerequisites `A -> B`, `A -> C`, `B -> D`, `C -> D`. D must wait for both B and C. A possible result is `[A, B, C, D]`.
+
+Indegree counts unfinished prerequisites: `{A: 0, B: 1, C: 1, D: 2}`. The ready queue initially contains A. Completing B alone leaves D blocked with indegree 1.
+
+| Completed | Updated prerequisite counts | Ready queue |
+| --- | --- | --- |
+| A | B:0, C:0, D:2 | `[B, C]` |
+| B | D:1 | `[C]` |
+| C | D:0 | `[D]` |
+| D | All complete | `[]` |
+
+## Putting the program together: topological ordering
+
+This complete function uses integer job IDs `[0, n)`. Edges are `[prerequisite, dependent]`. Invalid IDs or cycles return false. Duplicate edges are counted and decremented consistently.
+
+```go
+func JobOrder(n int, edges [][2]int) ([]int, bool) {
+    if n < 0 {
+        return nil, false
+    }
+    next := make([][]int, n)
+    pending := make([]int, n)
+    for _, e := range edges {
+        if e[0] < 0 || e[0] >= n ||
+            e[1] < 0 || e[1] >= n {
+            return nil, false
+        }
+        next[e[0]] = append(next[e[0]], e[1])
+        pending[e[1]]++
+    }
+    var ready []int
+    for id, count := range pending {
+        if count == 0 {
+            ready = append(ready, id)
+        }
+    }
+    for head := 0; head < len(ready); head++ {
+        for _, id := range next[ready[head]] {
+            pending[id]--
+            if pending[id] == 0 {
+                ready = append(ready, id)
+            }
+        }
+    }
+    return ready, len(ready) == n
+}
+```
+
+Isolated jobs are included by initialization. Add `D -> A` and the cycle blocks complete output. An empty final queue alone does not prove success; compare output count with n. Time and space are O(V+E). A smallest-ready-ID requirement needs a heap instead of the queue.
+
+## Clone Graph: register identity before following cycles
+
+**Problem.** Copy a graph without sharing its original nodes, preserving cycles and shared neighbors. Two distinct nodes may have the same label, so identity must use pointers rather than labels.
+
+```go
+type GraphNode struct {
+    Label string
+    Neighbors []*GraphNode
+}
+
+func CloneGraph(start *GraphNode) *GraphNode {
+    copied := make(map[*GraphNode]*GraphNode)
+    var clone func(*GraphNode) *GraphNode
+    clone = func(n *GraphNode) *GraphNode {
+        if n == nil {
+            return nil
+        }
+        if copy, found := copied[n]; found {
+            return copy
+        }
+        copy := &GraphNode{Label: n.Label}
+        copied[n] = copy
+        for _, neighbor := range n.Neighbors {
+            copy.Neighbors = append(copy.Neighbors,
+                clone(neighbor))
+        }
+        return copy
+    }
+    return clone(start)
+}
+```
+
+For `A -> B -> A`, registering the copy of A before copying B lets B's back-edge reuse that copy. Late registration would recurse forever. Each reachable node is copied once, giving O(V+E) time and space. Discovery, readiness, and clone identity are distinct meanings of visited state; name the meaning your task needs.

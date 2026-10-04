@@ -1,105 +1,175 @@
-# Chapter 5 — Stacks greedy choices and dynamic programming
+# Chapter 5 - Stacks, greedy choices, backtracking, and dynamic programming
 
-When a problem does not reduce to lookup or ordering, ask what choices remain and whether different paths reach the same remaining problem.
+Some problems ask you to match unfinished work; others ask you to choose a best combination. This chapter explains how to decide what state represents, whether a local choice is safe, and when different choice paths can reuse the same remaining answer.
 
-## Stacks remember unfinished work
+## Matching brackets: unfinished work has a last-in-first-out order
 
-Balanced delimiters are the simplest example. Push opening brackets. A closing bracket must match the most recent unfinished opening bracket, so inspect the top. If it does not match, reject immediately. Finish with an empty stack. Counts alone fail on “open square, open round, close square, close round” because totals ignore nesting order.
+**Problem.** Validate nesting in `"([])"`. It is valid. `"([)]"` is invalid even though opening and closing counts match. A closing bracket must match the most recent unfinished opener.
 
-A monotonic stack is useful for “next greater” questions. Suppose daily loads are seventy, seventy three, seventy one, seventy four. Store indices whose next greater load is unresolved, keeping their values decreasing from bottom to top. When seventy four arrives, it resolves seventy one and seventy three; pop each and compute its distance. Each index is pushed once and popped once, so total work is linear even with a nested loop.
-
-The proof is about discarded candidates. A value popped by a later greater value no longer needs to wait: this is the first greater value encountered since its insertion. For “next greater or equal,” change the equality rule. For a sliding-window maximum, use a monotonic deque because old indices must also expire from the front. A regular stack cannot efficiently remove those oldest elements.
-
-## Greedy requires a reason that local choices are safe
-
-Choose the maximum number of nonoverlapping screenings. Sorting by earliest finish and taking the next compatible screening works: replace the first screening in any optimal schedule with the earliest-finishing one. It cannot finish later, so all later choices remain feasible. Repeat the exchange argument on the remaining schedule.
-
-Sorting by earliest start does not work: a long early interval may exclude many shorter intervals. If screenings have different values and you want maximum total value, earliest finish is no longer enough. The objective changed, so the proof no longer applies. That variant naturally introduces dynamic programming.
-
-## Backtracking explores choices deliberately
-
-Generate playlists of exactly three distinct titles from a small set, subject to a duration budget. A state includes chosen titles, next available index, and remaining budget. Choose a title, recurse, then undo the choice. Choosing indices in increasing order avoids generating permutations when order does not matter. If order matters, that restriction would wrongly remove valid playlists.
-
-Prune only when a branch cannot recover. Exceeding a duration budget is safe to prune if all future durations are nonnegative. It is not safe if negative adjustments exist. Copy the current slice when saving a completed answer; otherwise later mutations may overwrite earlier answers through the same backing array. The search can remain exponential, and the output itself may be exponential. Do not hide that cost behind “recursion.”
-
-**Failure case.** Two paths can reuse a suffix answer only when their remaining constraints and requested output agree.
-
-For counting or best achievable future score, earlier history may be irrelevant once the state summarizes every future constraint. For enumerating full playlists, you can reuse suffix results carefully, but outputs must still include each distinct prefix. If a genre restriction depends on earlier choices, index and budget are not a sufficient state.
-
-## Dynamic programming is reused subproblem reasoning
-
-Consider choosing nonadjacent episode promotions to maximize total value. At index i, either skip it and solve from i plus one, or take it and solve from i plus two. Define best of i as the best total achievable from index i onward. The recurrence is the larger of those two choices. Beyond the end, the best value is zero. If selecting nothing is allowed, negative values naturally get skipped.
-
-For values four, one, one, four, the answer is eight from the first and last positions. Recursive branching repeats the same suffix problems. Memoization reduces the number of solved states to n. A bottom-up pass from right to left uses only the next two answers, giving linear time and constant auxiliary space. If you must return the selected indices, store decisions or a full table and reconstruct. Reference: `MaxNonAdjacent`.
-
-Before writing a DP table, answer four questions in sentences: what does one state mean; what choices leave it; what smaller states do those choices require; and what are the base cases? Then count states times work per state. For a duration budget B and n titles, a table indexed by item and budget may cost O(nB), which is pseudopolynomial because B's numeric magnitude matters.
-
-## How to discover a state instead of guessing a recurrence
-
-Start with a choice you can explain in everyday language. Suppose promotional slots lie in a row and adjacent slots cannot both be selected. At the first slot, you either take it or skip it. Taking it removes the next slot from consideration. Skipping it leaves the next slot available. Both branches lead to smaller problems of the same kind. You have found a recurrence by describing valid choices, not by looking for a formula.
-
-Now ask what information a smaller problem needs. If all earlier constraints have already been resolved, the suffix starting at a position is enough. It does not need to remember the exact sequence of earlier decisions. Two branches reaching that same suffix can reuse the same best result. If there is also a remaining money budget, position alone is no longer enough; the state needs budget too. A dynamic-programming state is a summary of all past information that can still affect the future.
-
-There are two different opportunities to avoid work. A greedy proof shows that one choice can always replace another without harming an optimal answer, so you never explore the rejected alternative. Dynamic programming explores the meaningful alternatives but shares repeated subproblems. Backtracking explores a decision tree and may prune branches that cannot lead to valid answers. These techniques can coexist, but they eliminate work for different reasons.
-
-The safest way to test a proposed state is to try to make it lie. Can two histories produce the same state but have different legal futures or different optimal future values? If so, the state has forgotten something important. For example, a playlist state containing only remaining duration cannot enforce “do not choose two films from the same director” unless it also remembers selected directors or uses another representation that preserves the restriction.
-
-Similarly, test a greedy choice by trying to defeat it with a tiny example. Choosing the highest-value promotion first sounds plausible. With values six, ten, six in three adjacent positions, taking the middle ten blocks both sixes, while taking the ends gives twelve. The counterexample shows that this greedy rule lacks the exchange property you would need. It does not mean greedy algorithms are unreliable; it means each greedy rule needs its own proof.
-
-## Worked example: discover the state from the choices
-
-Three advertising slots offer rewards 6, 10, and 6. Adjacent slots cannot both be chosen. Choosing the largest reward first gives ten, but choosing both ends gives twelve. The failed greedy choice suggests comparing complete alternatives rather than committing to the locally largest value.
-
-![At each position, either skip it or take it and jump past its neighbor. The two branches solve smaller suffixes.](figures/choices.svg)
-
-Let best at position i mean the largest reward obtainable from position i onward. Skip gives best at i plus one. Take gives the current reward plus best at i plus two. Keep the larger. Past the end, the reward is zero. This definition includes the assumption that choosing nothing is allowed.
-
-| Position, evaluated backward | Skip | Take | Best |
-| --- | --- | --- | --- |
-| Last 6 | 0 | 6 + 0 | 6 |
-| Middle 10 | 6 | 10 + 0 | 10 |
-| First 6 | 10 | 6 + 6 | 12 |
-
-The suffix state is sufficient because the earlier choices impose no further condition once entry into that suffix is legal. If the problem also limits the number of chosen slots, position alone is insufficient: two visits to the same position with different remaining allowances can have different answers. Add the allowance to the state. Memoization works only when the state actually identifies an equivalent remaining problem.
-
-To recover the selected slots, store which branch won or retain the table and compare alternatives again while walking forward. Computing only the best number can use two rolling values; reconstructing a selection needs additional information. The requested output changes the representation.
-
-## Worked example: a stack postpones decisions
-
-For each value in 2, 1, 3, find the next strictly greater value to its right. A stack holds indices still waiting for an answer. After reading two, index zero waits. After reading one, both zero and one wait, with the smaller value at the top. Reading three answers both unresolved positions: first one, then two. Index two then waits until the input ends and receives no answer.
-
-| New value | Values still waiting | Answers established |
+| Character in `"([])"` | Stack after action | Reason |
 | --- | --- | --- |
-| 2 | 2 | None |
-| 1 | 2, 1 | None |
-| 3 | 3 | Next greater for 1 and 2 is 3 |
+| `(` | `['(']` | Wait for closing round bracket |
+| `[` | `['(', '[']` | The square opener is now innermost |
+| `]` | `['(']` | Match and pop square opener |
+| `)` | `[]` | Match and pop round opener |
 
-Store indices rather than just values so answers can be written to the correct positions, including duplicates. For a strictly greater query, an equal arrival does not resolve an equal waiting value. That single word in the contract changes the comparison.
+Stack cells contain the unmatched opening characters. The code below uses bytes and assumes the input contains only the six bracket characters. It rejects any other character.
 
-Every index is pushed once and popped at most once. Several pops during the final arrival do not make the complete scan quadratic. This is the same aggregate accounting used for sliding-window removals, applied to a different invariant: the stack contains precisely the unresolved positions in monotonic value order.
+## Go example: match the top before popping
 
-## Putting the program together: choosing nonadjacent promotions
+```go
+func Balanced(text string) bool {
+    pairs := map[byte]byte{')': '(', ']': '[', '}': '{'}
+    var stack []byte
+    for i := 0; i < len(text); i++ {
+        ch := text[i]
+        if ch == '(' || ch == '[' || ch == '{' {
+            stack = append(stack, ch)
+            continue
+        }
+        opener, valid := pairs[ch]
+        if !valid || len(stack) == 0 ||
+            stack[len(stack)-1] != opener {
+            return false
+        }
+        stack = stack[:len(stack)-1]
+    }
+    return len(stack) == 0
+}
+```
 
-The function takes a slice of signed rewards and returns the greatest total from nonadjacent positions. Empty selection is allowed. The result uses a numeric type large enough for allowed sums. An empty input therefore returns zero. We first solve for the value alone; returning selected positions is a separate extension.
+The stack is the exact sequence of unmatched openers. For `"([)]"`, ')' sees '[' at the top and immediately fails. An empty string is valid; a leading closer fails before indexing the stack. Each character is pushed or popped at most once: O(n) time and O(n) space.
 
-Define best-from-i as the best achievable total using positions i onward. At i, skipping gives best-from-next. Taking gives the current reward plus best-from-two-ahead. Choose the larger. Beyond the input, the contribution is zero. This description is already executable recursive pseudocode, but a naive recursion repeats many identical suffix problems.
+## Monotonic stacks: wait for a greater value
 
-A bottom-up implementation walks from the last position toward the first. Keep two fields of working state: the best result for the next suffix and for the suffix two positions ahead. Compute the new best using their old values, then shift the working state so it refers to the correct suffixes for the next iteration. Updating a variable too early can accidentally replace a needed old result.
+**Problem.** For `load = [70, 73, 71, 74]`, return how many later positions you must wait for a strictly greater value: `[1, 2, 1, 0]`. Zero means no later greater value.
 
-For four, one, one, four, begin beyond the end with zero and zero. The final four produces best four. The preceding one produces best four. The next one produces best five. The first four produces best eight by combining itself with the best suffix beginning at the third position. The returned eight corresponds to selecting the two ends.
+Store unresolved indices, keeping their values nonincreasing from bottom to top. Arrival 74 resolves index 2 (71), then index 1 (73). Index 0 (70) was already resolved by 73.
 
-The loop uses linear time and constant auxiliary storage. To return the chosen positions, keep the table of suffix answers or equivalent decisions, then walk forward: compare taking with skipping under a defined tie policy. Taking advances two positions; skipping advances one. This reconstruction requires information discarded by the two-number optimization, so the extra output requirement affects space.
+![Arrival 74 pops the unresolved loads 71 and 73. Their indices determine the waiting distances.](figures/monotonic-stack.svg)
 
-## Go example: keep only the two suffix answers needed
+| Arrival | Unresolved indices | Newly known waits |
+| --- | --- | --- |
+| 70 at 0 | `[0]` | None |
+| 73 at 1 | `[1]` | Index 0 waits 1 |
+| 71 at 2 | `[1, 2]` | None |
+| 74 at 3 | `[3]` | Index 2 waits 1; index 1 waits 2 |
 
-This complete function computes the maximum reward when neighboring positions cannot both be selected. Selecting nothing is allowed. Rewards and their sums must fit int64. The code returns the best number, not the chosen positions.
+```go
+func GreaterWait(values []int) []int {
+    waits := make([]int, len(values))
+    var stack []int
+    for i, value := range values {
+        for len(stack) > 0 {
+            j := stack[len(stack)-1]
+            if value <= values[j] {
+                break
+            }
+            stack = stack[:len(stack)-1]
+            waits[j] = i-j
+        }
+        stack = append(stack, i)
+    }
+    return waits
+}
+```
+
+Why is this the first greater value? If a greater value had arrived earlier, it would already have popped that unresolved index. Equal values do not resolve a strictly-greater query. Every index is pushed once and popped at most once, so the nested loop still totals O(n) work, with O(n) storage. Sliding-window maximum additionally needs expiration from the oldest end, so it uses a monotonic deque rather than this stack.
+
+## Greedy scheduling: the choice needs a proof
+
+**Problem.** Select the largest number of nonoverlapping screenings from `[[0, 10], [1, 2], [2, 3], [3, 4]]`. Half-open intervals may touch. Choosing earliest start gives only `[0, 10]`; choosing earliest finish yields 3 short screenings.
+
+![The long early screening blocks three compatible short screenings. Earliest finish preserves room for later choices.](figures/greedy-screenings.svg)
+
+Sort by finish and take each compatible interval. In any optimal solution, replacing its first interval with the earliest-finishing one cannot obstruct later intervals, because it finishes no later. Repeat this exchange argument on the remaining schedule.
+
+```go
+func MostScreenings(input [][2]int) [][2]int {
+    a := append([][2]int(nil), input...)
+    sort.Slice(a, func(i, j int) bool {
+        if a[i][1] != a[j][1] {
+            return a[i][1] < a[j][1]
+        }
+        return a[i][0] < a[j][0]
+    })
+    var chosen [][2]int
+    end, haveEnd := 0, false
+    for _, interval := range a {
+        if !haveEnd || interval[0] >= end {
+            chosen = append(chosen, interval)
+            end, haveEnd = interval[1], true
+        }
+    }
+    return chosen
+}
+```
+
+Assume valid intervals with start<end. The boolean allows negative timestamps instead of using 0 as an accidental lower bound. Sorting costs O(n log n), storage O(n) for the preserved copy and output. If screenings carry different rewards and the objective becomes maximum total reward, this greedy proof no longer establishes optimality.
+
+## Backtracking: enumerate choices and undo each one
+
+**Problem.** Choose exactly 2 titles within duration budget 5 from `duration = [2, 3, 4]`. Order does not matter. The only result is indices `[[0, 1]]`, totaling 5. The baseline is an explicit choice search, not a sorting trick.
+
+A state contains the next available index, the chosen indices, and remaining budget. Use increasing indices to generate each combination once. After exploring a choice, remove it before exploring a sibling branch.
+
+```go
+func PlaylistChoices(duration []int,
+    count, budget int) [][]int {
+    if count < 0 || budget < 0 {
+        return nil
+    }
+    var chosen []int
+    var out [][]int
+    var search func(int, int)
+    search = func(start, remaining int) {
+        if len(chosen) == count {
+            snapshot := append([]int{}, chosen...)
+            out = append(out, snapshot)
+            return
+        }
+        for i := start; i < len(duration); i++ {
+            if duration[i] > remaining {
+                continue
+            }
+            chosen = append(chosen, i)
+            search(i+1, remaining-duration[i])
+            chosen = chosen[:len(chosen)-1]
+        }
+    }
+    search(0, budget)
+    return out
+}
+```
+
+This assumes nonnegative durations; pruning an over-budget choice is unsafe if later negative contributions could repair it. Copy each completed result because later mutations reuse chosen's backing array. Search can be exponential, and output can itself be exponential. Auxiliary recursion/path space is O(n), excluding saved answers.
+
+A permutation problem would have a different contract: increasing indices would incorrectly discard different orders. A director restriction would need director state; index and budget alone would forget a constraint.
+
+## Worked example: derive a DP state from take or skip
+
+**Problem.** Rewards `reward = [6, 10, 6]` occupy neighboring promotion slots. Select nonadjacent slots for maximum total; choosing nothing is allowed. The answer is 12 from indices `[0, 2]`. Greedily choosing the largest reward gives 10 and fails.
+
+Define `best[i]` as the maximum reward using positions i onward. At i, either skip and obtain `best[i+1]`, or take and obtain `reward[i] + best[i+2]`. These are the complete legal choices. Beyond the array, best is 0.
+
+![Taking a slot jumps over its neighbor. Skipping advances one position; both lead to smaller suffix problems.](figures/choices.svg)
+
+| i, evaluated backward | Skip | Take | best[i] |
+| --- | --- | --- | --- |
+| 2 | 0 | `6+0 = 6` | 6 |
+| 1 | 6 | `10+0 = 10` | 10 |
+| 0 | 10 | `6+6 = 12` | 12 |
+
+A naive recursion reaches the same suffix through several decision paths. Memoization computes each suffix once; a backward loop does so directly. The state is sufficient because earlier choices impose no remaining condition after a legal entry to that suffix.
+
+## Putting the program together: two rolling suffix answers
 
 ```go
 func BestNonAdjacent(reward []int64) int64 {
     var next, afterNext int64
-    for i := len(reward) - 1; i >= 0; i-- {
+    for i := len(reward)-1; i >= 0; i-- {
         take := reward[i] + afterNext
-        current := next // Skip position i.
+        current := next
         if take > current {
             current = take
         }
@@ -110,6 +180,12 @@ func BestNonAdjacent(reward []int64) int64 {
 }
 ```
 
-At the start of an iteration, next is the best suffix beginning at i+1 and afterNext is the best suffix beginning at i+2. For 6, 10, 6, the successive best values are six, ten, and twelve. Assigning `afterNext = next` before overwriting next preserves the old suffix answer. Reversing those assignments would overwrite information still needed.
+At iteration i, next means `best[i+1]` and afterNext means `best[i+2]`. Save the old next into afterNext before replacing next. Empty and all-negative inputs return 0 under the empty-selection contract. Time is O(n), space O(1); all sums must fit int64.
 
-Empty input returns zero. All-negative input also returns zero under the stated contract. If choosing at least one element is mandatory, the initial zero states and recurrence need reconsideration. Time is linear and extra space constant. Recovering the selected indices would require retaining decisions or recomputing them; the two rolling values alone deliberately discard that history.
+## Worked example: value output and reconstructed output need different state
+
+For `[4, 1, 1, 4]`, the full suffix table is `[8, 5, 4, 4, 0, 0]`. At index 0, taking gives `4 + best[2] = 8`, better than skipping's 5. Jump to index 2: skip its 1 because best[3]=4 is better than `1+best[4]=1`. Take index 3. Output indices are `[0, 3]`.
+
+The rolling implementation returns 8 but deliberately discards the decisions needed to recover `[0, 3]`. Retain a table or decisions when the output requires them. Adding a selection limit or budget similarly expands the DP state. Count states times work per state; an O(nB) budget table depends on the numeric budget B and is pseudopolynomial.
+
+Greedy discards choices using a proof; backtracking explores distinct choices; DP shares equivalent remaining problems. A tiny counterexample and an explicit state definition are more useful than guessing a technique from the story.
