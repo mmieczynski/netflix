@@ -24,6 +24,10 @@ For each topic, identify the output, assumptions, and slow baseline first. Then 
 
 Illustrative tuples and maps are notation, not always literal Go syntax. Fenced Go blocks use actual Go declarations. Code omits package and import boilerplate for readability; examples using sorting, heap operations, or locks use `sort`, `container/heap`, or `sync`. The repository's example package assembles all blocks for compiler and behavior checks.
 
+## Presenting a solution in a live interview
+
+Use these examples as a model for clear implementation: agree on the contract, name the state, explain the invariant, and then write the smallest solution that meets it. Handle the stated edge cases and say when an input assumption replaces validation. Brief code comments explain a boundary, mutation order, or ownership decision; the surrounding prose supplies the longer reasoning. Trace a normal case and a boundary case, and account for all retained state when explaining complexity. Add concurrency or a more elaborate index when the requirements call for it.
+
 ## Reading code without running it
 
 Before a loop, name what each variable means. For one row of the trace, follow the lookup, decision, and update in order. For prefix counting, for example, the map stores earlier boundaries before the current one is inserted. Reversing those lines changes the meaning and can introduce an empty-subarray bug.

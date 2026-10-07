@@ -6,7 +6,7 @@ An LRU cache limits space but says nothing about freshness. Movie metadata can b
 
 **Problem.** Store `Put("A", "HD", ttl=5)` at time 0. A read at time 4 returns HD; a read at time 5 returns missing. TTL means time to live. Our deadline is `writeTime + ttl`, and a value is live only when `now < deadline`.
 
-Overwriting resets the lifetime; reading does not extend it. Nonpositive TTL removes the key. The clock is injected, uses one agreed integer tick unit, and never goes backward. Deadline arithmetic and generation numbers must not overflow.
+Overwriting resets the lifetime; reading does not extend it. Nonpositive TTL removes the key. The clock is injected, is non-nil, uses one agreed integer tick unit, and never goes backward. Deadline arithmetic and generation numbers must not overflow.
 
 | Time | Operation | Result |
 | --- | --- | --- |
@@ -22,29 +22,29 @@ Each current entry carries its value, absolute deadline, and write generation. A
 
 ```go
 type TimedValue struct {
-    Value string
-    Deadline int64
-    Generation uint64
+	Value      string
+	Deadline   int64
+	Generation uint64
 }
 
 type Expiry struct {
-    Key string
-    Deadline int64
-    Generation uint64
+	Key        string
+	Deadline   int64
+	Generation uint64
 }
 
 type TTLMap struct {
-    current map[string]TimedValue
-    due ExpiryHeap
-    next uint64
-    clock func() int64
+	current map[string]TimedValue
+	due     ExpiryHeap
+	next    uint64
+	clock   func() int64
 }
 
 func NewTTLMap(clock func() int64) *TTLMap {
-    return &TTLMap{
-        current: make(map[string]TimedValue),
-        clock: clock,
-    }
+	return &TTLMap{
+		current: make(map[string]TimedValue),
+		clock:   clock,
+	}
 }
 ```
 
@@ -52,29 +52,32 @@ ExpiryHeap is the min heap defined below. Heap storage is separate from current 
 
 ```go
 func (c *TTLMap) Put(key, value string, ttl int64) {
-    if ttl <= 0 {
-        delete(c.current, key)
-        return
-    }
-    deadline := c.clock() + ttl
-    c.next++
-    c.current[key] = TimedValue{
-        Value: value, Deadline: deadline,
-        Generation: c.next,
-    }
-    heap.Push(&c.due, Expiry{key, deadline, c.next})
+	if ttl <= 0 {
+		delete(c.current, key)
+		return
+	}
+	deadline := c.clock() + ttl
+	// A new generation distinguishes refreshes and reinserts.
+	c.next++
+	c.current[key] = TimedValue{
+		Value: value, Deadline: deadline,
+		Generation: c.next,
+	}
+	heap.Push(&c.due, Expiry{
+		Key: key, Deadline: deadline, Generation: c.next,
+	})
 }
 
 func (c *TTLMap) Get(key string) (string, bool) {
-    entry, found := c.current[key]
-    if !found {
-        return "", false
-    }
-    if c.clock() >= entry.Deadline {
-        delete(c.current, key)
-        return "", false
-    }
-    return entry.Value, true
+	entry, found := c.current[key]
+	if !found {
+		return "", false
+	}
+	if c.clock() >= entry.Deadline {
+		delete(c.current, key)
+		return "", false
+	}
+	return entry.Value, true
 }
 ```
 
@@ -100,20 +103,21 @@ type ExpiryHeap []Expiry
 
 func (h ExpiryHeap) Len() int { return len(h) }
 func (h ExpiryHeap) Less(i, j int) bool {
-    return h[i].Deadline < h[j].Deadline
+	return h[i].Deadline < h[j].Deadline
 }
 func (h ExpiryHeap) Swap(i, j int) {
-    h[i], h[j] = h[j], h[i]
+	h[i], h[j] = h[j], h[i]
 }
 func (h *ExpiryHeap) Push(value any) {
-    *h = append(*h, value.(Expiry))
+	*h = append(*h, value.(Expiry))
 }
 func (h *ExpiryHeap) Pop() any {
-    last := len(*h)-1
-    value := (*h)[last]
-    (*h)[last] = Expiry{}
-    *h = (*h)[:last]
-    return value
+	last := len(*h) - 1
+	value := (*h)[last]
+	// Release the key held in the unused backing-array slot.
+	(*h)[last] = Expiry{}
+	*h = (*h)[:last]
+	return value
 }
 ```
 
@@ -134,16 +138,17 @@ Checking only the key at time 5 would delete fresh data. A global increasing gen
 
 ```go
 func ApplyExpiry(current map[string]TimedValue,
-    record Expiry, now int64) bool {
-    if record.Deadline > now {
-        return false
-    }
-    entry, found := current[record.Key]
-    if !found || entry.Generation != record.Generation {
-        return false
-    }
-    delete(current, record.Key)
-    return true
+	record Expiry, now int64) bool {
+	if record.Deadline > now {
+		return false
+	}
+	entry, found := current[record.Key]
+	// An old timer must not remove a newer write.
+	if !found || entry.Generation != record.Generation {
+		return false
+	}
+	delete(current, record.Key)
+	return true
 }
 ```
 
@@ -151,11 +156,11 @@ func ApplyExpiry(current map[string]TimedValue,
 
 ```go
 func (c *TTLMap) Cleanup() {
-    now := c.clock()
-    for len(c.due) > 0 && c.due[0].Deadline <= now {
-        record := heap.Pop(&c.due).(Expiry)
-        ApplyExpiry(c.current, record, now)
-    }
+	now := c.clock()
+	for len(c.due) > 0 && c.due[0].Deadline <= now {
+		record := heap.Pop(&c.due).(Expiry)
+		ApplyExpiry(c.current, record, now)
+	}
 }
 ```
 
@@ -184,24 +189,29 @@ The check-and-record decision needs one atomic operation. Likewise LRU Get needs
 
 ```go
 type SafeReadCache struct {
-    mu sync.Mutex
-    cache *ReadCache
+	mu    sync.Mutex
+	cache *ReadCache
+}
+
+func NewSafeReadCache(capacity int) *SafeReadCache {
+	return &SafeReadCache{cache: NewReadCache(capacity)}
 }
 
 func (s *SafeReadCache) Get(key string) (int, bool) {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    return s.cache.Get(key)
+	// A cache hit changes recency, so Get needs a write lock.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cache.Get(key)
 }
 
 func (s *SafeReadCache) Put(key string, value int) {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    s.cache.Put(key, value)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.cache.Put(key, value)
 }
 ```
 
-Initialize cache with NewReadCache. Helpers assume the caller already holds the lock; locking each helper recursively can deadlock. Do not copy a struct after its mutex has been used. Read/write locks are useful only when the protected read is truly read-only.
+Initialize with NewSafeReadCache so the wrapper owns an initialized cache. All access to that cache goes through the wrapper. Helpers assume the caller already holds the lock; locking each helper recursively can deadlock. Do not copy a struct after its mutex has been used. Read/write locks are useful only when the protected read is truly read-only.
 
 ## Single-flight: share one pending backend load per key
 
@@ -211,38 +221,41 @@ Initialize cache with NewReadCache. Helpers assume the caller already holds the 
 
 ```go
 type loadCall struct {
-    done chan struct{}
-    value string
-    err error
+	done  chan struct{}
+	value string
+	err   error
 }
 
 type SharedLoader struct {
-    mu sync.Mutex
-    active map[string]*loadCall
+	mu     sync.Mutex
+	active map[string]*loadCall
 }
 
 func (l *SharedLoader) Do(key string,
-    load func() (string, error)) (string, error) {
-    l.mu.Lock()
-    if call, found := l.active[key]; found {
-        l.mu.Unlock()
-        <-call.done
-        return call.value, call.err
-    }
-    if l.active == nil {
-        l.active = make(map[string]*loadCall)
-    }
-    call := &loadCall{done: make(chan struct{})}
-    l.active[key] = call
-    l.mu.Unlock()
+	load func() (string, error)) (string, error) {
+	l.mu.Lock()
+	if call, found := l.active[key]; found {
+		l.mu.Unlock()
+		// Wait without holding the lock needed by the leader.
+		<-call.done
+		return call.value, call.err
+	}
+	if l.active == nil {
+		l.active = make(map[string]*loadCall)
+	}
+	call := &loadCall{done: make(chan struct{})}
+	l.active[key] = call
+	l.mu.Unlock()
 
-    value, err := load()
-    l.mu.Lock()
-    call.value, call.err = value, err
-    delete(l.active, key)
-    close(call.done)
-    l.mu.Unlock()
-    return value, err
+	// Other keys can proceed while this backend call runs.
+	value, err := load()
+	l.mu.Lock()
+	call.value, call.err = value, err
+	delete(l.active, key)
+	// Publish the result before waking every waiter.
+	close(call.done)
+	l.mu.Unlock()
+	return value, err
 }
 ```
 

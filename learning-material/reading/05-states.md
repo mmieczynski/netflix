@@ -19,22 +19,22 @@ Stack cells contain the unmatched opening characters. The code below uses bytes 
 
 ```go
 func Balanced(text string) bool {
-    pairs := map[byte]byte{')': '(', ']': '[', '}': '{'}
-    var stack []byte
-    for i := 0; i < len(text); i++ {
-        ch := text[i]
-        if ch == '(' || ch == '[' || ch == '{' {
-            stack = append(stack, ch)
-            continue
-        }
-        opener, valid := pairs[ch]
-        if !valid || len(stack) == 0 ||
-            stack[len(stack)-1] != opener {
-            return false
-        }
-        stack = stack[:len(stack)-1]
-    }
-    return len(stack) == 0
+	pairs := map[byte]byte{')': '(', ']': '[', '}': '{'}
+	var stack []byte
+	for i := 0; i < len(text); i++ {
+		ch := text[i]
+		if ch == '(' || ch == '[' || ch == '{' {
+			stack = append(stack, ch)
+			continue
+		}
+		opener, valid := pairs[ch]
+		if !valid || len(stack) == 0 ||
+			stack[len(stack)-1] != opener {
+			return false
+		}
+		stack = stack[:len(stack)-1]
+	}
+	return len(stack) == 0
 }
 ```
 
@@ -57,20 +57,21 @@ Store unresolved indices, keeping their values nonincreasing from bottom to top.
 
 ```go
 func GreaterWait(values []int) []int {
-    waits := make([]int, len(values))
-    var stack []int
-    for i, value := range values {
-        for len(stack) > 0 {
-            j := stack[len(stack)-1]
-            if value <= values[j] {
-                break
-            }
-            stack = stack[:len(stack)-1]
-            waits[j] = i-j
-        }
-        stack = append(stack, i)
-    }
-    return waits
+	waits := make([]int, len(values))
+	var stack []int
+	for i, value := range values {
+		for len(stack) > 0 {
+			j := stack[len(stack)-1]
+			if value <= values[j] {
+				break
+			}
+			stack = stack[:len(stack)-1]
+			// This is the first later value greater than j's.
+			waits[j] = i - j
+		}
+		stack = append(stack, i)
+	}
+	return waits
 }
 ```
 
@@ -86,22 +87,23 @@ Sort by finish and take each compatible interval. In any optimal solution, repla
 
 ```go
 func MostScreenings(input [][2]int) [][2]int {
-    a := append([][2]int(nil), input...)
-    sort.Slice(a, func(i, j int) bool {
-        if a[i][1] != a[j][1] {
-            return a[i][1] < a[j][1]
-        }
-        return a[i][0] < a[j][0]
-    })
-    var chosen [][2]int
-    end, haveEnd := 0, false
-    for _, interval := range a {
-        if !haveEnd || interval[0] >= end {
-            chosen = append(chosen, interval)
-            end, haveEnd = interval[1], true
-        }
-    }
-    return chosen
+	a := append([][2]int(nil), input...)
+	sort.Slice(a, func(i, j int) bool {
+		if a[i][1] != a[j][1] {
+			return a[i][1] < a[j][1]
+		}
+		return a[i][0] < a[j][0]
+	})
+	var chosen [][2]int
+	end, haveEnd := 0, false
+	for _, interval := range a {
+		// Earliest finish leaves room for later screenings.
+		if !haveEnd || interval[0] >= end {
+			chosen = append(chosen, interval)
+			end, haveEnd = interval[1], true
+		}
+	}
+	return chosen
 }
 ```
 
@@ -115,34 +117,38 @@ A state contains the next available index, the chosen indices, and remaining bud
 
 ```go
 func PlaylistChoices(duration []int,
-    count, budget int) [][]int {
-    if count < 0 || budget < 0 {
-        return nil
-    }
-    var chosen []int
-    var out [][]int
-    var search func(int, int)
-    search = func(start, remaining int) {
-        if len(chosen) == count {
-            snapshot := append([]int{}, chosen...)
-            out = append(out, snapshot)
-            return
-        }
-        for i := start; i < len(duration); i++ {
-            if duration[i] > remaining {
-                continue
-            }
-            chosen = append(chosen, i)
-            search(i+1, remaining-duration[i])
-            chosen = chosen[:len(chosen)-1]
-        }
-    }
-    search(0, budget)
-    return out
+	count, budget int) [][]int {
+	if count < 0 || budget < 0 {
+		return nil
+	}
+	var chosen []int
+	var out [][]int
+	var search func(int, int)
+	search = func(start, remaining int) {
+		if len(chosen) == count {
+			// Later branches reuse chosen's backing array.
+			snapshot := append([]int{}, chosen...)
+			out = append(out, snapshot)
+			return
+		}
+		needed := count - len(chosen)
+		// Stop when too few titles remain to finish a choice.
+		for i := start; i <= len(duration)-needed; i++ {
+			if duration[i] > remaining {
+				continue
+			}
+			chosen = append(chosen, i)
+			search(i+1, remaining-duration[i])
+			// Undo this choice before exploring its sibling.
+			chosen = chosen[:len(chosen)-1]
+		}
+	}
+	search(0, budget)
+	return out
 }
 ```
 
-This assumes nonnegative durations; pruning an over-budget choice is unsafe if later negative contributions could repair it. Copy each completed result because later mutations reuse chosen's backing array. Search can be exponential, and output can itself be exponential. Auxiliary recursion/path space is O(n), excluding saved answers.
+This assumes nonnegative durations; pruning an over-budget choice is unsafe if later negative contributions could repair it. The loop also stops when fewer than the needed number of titles remain. Copy each completed result because later mutations reuse chosen's backing array. Search can be exponential, and output can itself be exponential. Auxiliary recursion/path space is O(n), excluding saved answers.
 
 A permutation problem would have a different contract: increasing indices would incorrectly discard different orders. A director restriction would need director state; index and budget alone would forget a constraint.
 
@@ -166,17 +172,18 @@ A naive recursion reaches the same suffix through several decision paths. Memoiz
 
 ```go
 func BestNonAdjacent(reward []int64) int64 {
-    var next, afterNext int64
-    for i := len(reward)-1; i >= 0; i-- {
-        take := reward[i] + afterNext
-        current := next
-        if take > current {
-            current = take
-        }
-        afterNext = next
-        next = current
-    }
-    return next
+	var next, afterNext int64
+	for i := len(reward) - 1; i >= 0; i-- {
+		// next is best[i+1]; afterNext is best[i+2].
+		take := reward[i] + afterNext
+		current := next
+		if take > current {
+			current = take
+		}
+		afterNext = next
+		next = current
+	}
+	return next
 }
 ```
 

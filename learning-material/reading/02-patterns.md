@@ -19,14 +19,15 @@ The slow baseline tries every pair, costing O(n²). When reading 7, the only que
 
 ```go
 func PairSum(nums []int, target int) ([2]int, bool) {
-    earlier := make(map[int]int)
-    for i, value := range nums {
-        if j, found := earlier[target-value]; found {
-            return [2]int{j, i}, true
-        }
-        earlier[value] = i
-    }
-    return [2]int{}, false
+	earlier := make(map[int]int)
+	for i, value := range nums {
+		// Search earlier positions before storing this one.
+		if j, found := earlier[target-value]; found {
+			return [2]int{j, i}, true
+		}
+		earlier[value] = i
+	}
+	return [2]int{}, false
 }
 ```
 
@@ -40,19 +41,20 @@ Sorting each word's letters gives a stable signature. For lowercase ASCII a-z, a
 
 ```go
 func AnagramGroups(words []string) [][]string {
-    groups := make(map[[26]int][]string)
-    for _, word := range words {
-        var key [26]int
-        for i := 0; i < len(word); i++ {
-            key[word[i]-'a']++
-        }
-        groups[key] = append(groups[key], word)
-    }
-    result := make([][]string, 0, len(groups))
-    for _, group := range groups {
-        result = append(result, group)
-    }
-    return result
+	groups := make(map[[26]int][]string)
+	for _, word := range words {
+		// Counts preserve each letter's multiplicity.
+		var key [26]int
+		for i := 0; i < len(word); i++ {
+			key[word[i]-'a']++
+		}
+		groups[key] = append(groups[key], word)
+	}
+	result := make([][]string, 0, len(groups))
+	for _, group := range groups {
+		result = append(result, group)
+	}
+	return result
 }
 ```
 
@@ -73,20 +75,21 @@ Store the latest position of each rune and a left boundary. A repeated rune insi
 
 ```go
 func UniqueLength(text string) int {
-    runes := []rune(text)
-    last := make(map[rune]int)
-    left, best := 0, 0
-    for right, r := range runes {
-        if previous, found := last[r]; found &&
-            previous >= left {
-            left = previous + 1
-        }
-        last[r] = right
-        if length := right-left+1; length > best {
-            best = length
-        }
-    }
-    return best
+	runes := []rune(text)
+	last := make(map[rune]int)
+	left, best := 0, 0
+	for right, r := range runes {
+		// An old repeat must not move the window backward.
+		if previous, found := last[r]; found &&
+			previous >= left {
+			left = previous + 1
+		}
+		last[r] = right
+		if length := right - left + 1; length > best {
+			best = length
+		}
+	}
+	return best
 }
 ```
 
@@ -116,14 +119,16 @@ At index 1, recording the current prefix 0 changes its frequency from 1 to 2. At
 
 ```go
 func SubarrayCount(nums []int, k int) int {
-    frequency := map[int]int{0: 1}
-    prefix, result := 0, 0
-    for _, value := range nums {
-        prefix += value
-        result += frequency[prefix-k]
-        frequency[prefix]++
-    }
-    return result
+	// The empty prefix lets a subarray start at index zero.
+	frequency := map[int]int{0: 1}
+	prefix, result := 0, 0
+	for _, value := range nums {
+		prefix += value
+		// Count earlier boundaries before recording this one.
+		result += frequency[prefix-k]
+		frequency[prefix]++
+	}
+	return result
 }
 ```
 
@@ -145,18 +150,20 @@ Fill each output with the product strictly to its left. Then multiply by the pro
 
 ```go
 func ProductsExceptSelf(nums []int64) []int64 {
-    out := make([]int64, len(nums))
-    left := int64(1)
-    for i, value := range nums {
-        out[i] = left
-        left *= value
-    }
-    right := int64(1)
-    for i := len(nums)-1; i >= 0; i-- {
-        out[i] *= right
-        right *= nums[i]
-    }
-    return out
+	out := make([]int64, len(nums))
+	left := int64(1)
+	for i, value := range nums {
+		// Write the product before including this element.
+		out[i] = left
+		left *= value
+	}
+	right := int64(1)
+	for i := len(nums) - 1; i >= 0; i-- {
+		// Combine products strictly on either side of i.
+		out[i] *= right
+		right *= nums[i]
+	}
+	return out
 }
 ```
 
@@ -182,23 +189,24 @@ A frequency map describes the current window. After adding C, counts are `{A: 2,
 
 ```go
 func LongestTwo(titles []string) int {
-    count := make(map[string]int)
-    left, best := 0, 0
-    for right, title := range titles {
-        count[title]++
-        for len(count) > 2 {
-            old := titles[left]
-            count[old]--
-            if count[old] == 0 {
-                delete(count, old)
-            }
-            left++
-        }
-        if length := right-left+1; length > best {
-            best = length
-        }
-    }
-    return best
+	count := make(map[string]int)
+	left, best := 0, 0
+	for right, title := range titles {
+		count[title]++
+		for len(count) > 2 {
+			old := titles[left]
+			count[old]--
+			if count[old] == 0 {
+				// Only live keys count toward the limit.
+				delete(count, old)
+			}
+			left++
+		}
+		if length := right - left + 1; length > best {
+			best = length
+		}
+	}
+	return best
 }
 ```
 

@@ -30,27 +30,27 @@ Head and tail are empty sentinel nodes outside the map and capacity. Even an emp
 
 ```go
 type cacheNode struct {
-    key string
-    value int
-    prev, next *cacheNode
+	key        string
+	value      int
+	prev, next *cacheNode
 }
 
 type ReadCache struct {
-    byKey map[string]*cacheNode
-    head, tail *cacheNode
-    capacity int
+	byKey      map[string]*cacheNode
+	head, tail *cacheNode
+	capacity   int
 }
 
 func NewReadCache(capacity int) *ReadCache {
-    if capacity < 0 {
-        capacity = 0
-    }
-    head, tail := &cacheNode{}, &cacheNode{}
-    head.next, tail.prev = tail, head
-    return &ReadCache{
-        byKey: make(map[string]*cacheNode),
-        head: head, tail: tail, capacity: capacity,
-    }
+	if capacity < 0 {
+		capacity = 0
+	}
+	head, tail := &cacheNode{}, &cacheNode{}
+	head.next, tail.prev = tail, head
+	return &ReadCache{
+		byKey: make(map[string]*cacheNode),
+		head:  head, tail: tail, capacity: capacity,
+	}
 }
 ```
 
@@ -64,21 +64,23 @@ Detach joins a known node's neighbors. InsertFront places a detached node betwee
 
 ```go
 func detach(n *cacheNode) {
-    n.prev.next = n.next
-    n.next.prev = n.prev
-    n.prev, n.next = nil, nil
+	// Join the neighbors before clearing this node's links.
+	n.prev.next = n.next
+	n.next.prev = n.prev
+	n.prev, n.next = nil, nil
 }
 
 func insertFront(head, n *cacheNode) {
-    first := head.next
-    n.prev, n.next = head, first
-    head.next = n
-    first.prev = n
+	first := head.next
+	n.prev, n.next = head, first
+	head.next = n
+	first.prev = n
 }
 
 func (c *ReadCache) remove(n *cacheNode) {
-    detach(n)
-    delete(c.byKey, n.key)
+	// Membership must change in both the list and the map.
+	detach(n)
+	delete(c.byKey, n.key)
 }
 ```
 
@@ -92,13 +94,13 @@ Get is lookup, promote, return. A miss performs no pointer edits.
 
 ```go
 func (c *ReadCache) Get(key string) (int, bool) {
-    n, found := c.byKey[key]
-    if !found {
-        return 0, false
-    }
-    detach(n)
-    insertFront(c.head, n)
-    return n.value, true
+	n, found := c.byKey[key]
+	if !found {
+		return 0, false
+	}
+	detach(n)
+	insertFront(c.head, n)
+	return n.value, true
 }
 ```
 
@@ -106,21 +108,23 @@ Put updates an existing node or adds one new node. Count-limited insertion can e
 
 ```go
 func (c *ReadCache) Put(key string, value int) {
-    if c.capacity == 0 {
-        return
-    }
-    if n, found := c.byKey[key]; found {
-        n.value = value
-        detach(n)
-        insertFront(c.head, n)
-        return
-    }
-    n := &cacheNode{key: key, value: value}
-    c.byKey[key] = n
-    insertFront(c.head, n)
-    if len(c.byKey) > c.capacity {
-        c.remove(c.tail.prev)
-    }
+	if c.capacity == 0 {
+		return
+	}
+	if n, found := c.byKey[key]; found {
+		// An overwrite reuses the existing list node.
+		n.value = value
+		detach(n)
+		insertFront(c.head, n)
+		return
+	}
+	n := &cacheNode{key: key, value: value}
+	c.byKey[key] = n
+	insertFront(c.head, n)
+	if len(c.byKey) > c.capacity {
+		// One insertion can require only one count eviction.
+		c.remove(c.tail.prev)
+	}
 }
 ```
 
@@ -153,23 +157,23 @@ This extension reuses the node/list helpers, while maintaining its own weight ac
 
 ```go
 type WeightedCache struct {
-    list *ReadCache
-    weights map[string]int
-    used, budget int
+	list         *ReadCache
+	weights      map[string]int
+	used, budget int
 }
 
 func NewWeightedCache(budget int) *WeightedCache {
-    if budget < 0 {
-        budget = 0
-    }
-    return &WeightedCache{
-        list: NewReadCache(0),
-        weights: make(map[string]int), budget: budget,
-    }
+	if budget < 0 {
+		budget = 0
+	}
+	return &WeightedCache{
+		list:    NewReadCache(0),
+		weights: make(map[string]int), budget: budget,
+	}
 }
 
 func (w *WeightedCache) Get(key string) (int, bool) {
-    return w.list.Get(key)
+	return w.list.Get(key)
 }
 ```
 
@@ -177,30 +181,32 @@ The following Put returns whether admission succeeded. Weights and their interme
 
 ```go
 func (w *WeightedCache) Put(key string,
-    value, weight int) bool {
-    if weight <= 0 || weight > w.budget {
-        return false
-    }
-    c := w.list
-    n, found := c.byKey[key]
-    if found {
-        w.used -= w.weights[key]
-        detach(n)
-    } else {
-        n = &cacheNode{key: key}
-        c.byKey[key] = n
-    }
-    n.value = value
-    insertFront(c.head, n)
-    w.weights[key] = weight
-    w.used += weight
-    for w.used > w.budget {
-        victim := c.tail.prev
-        w.used -= w.weights[victim.key]
-        delete(w.weights, victim.key)
-        c.remove(victim)
-    }
-    return true
+	value, weight int) bool {
+	// Rejection must preserve the old value and its recency.
+	if weight <= 0 || weight > w.budget {
+		return false
+	}
+	c := w.list
+	n, found := c.byKey[key]
+	if found {
+		w.used -= w.weights[key]
+		detach(n)
+	} else {
+		n = &cacheNode{key: key}
+		c.byKey[key] = n
+	}
+	n.value = value
+	insertFront(c.head, n)
+	w.weights[key] = weight
+	w.used += weight
+	// A heavier overwrite may require several victims.
+	for w.used > w.budget {
+		victim := c.tail.prev
+		w.used -= w.weights[victim.key]
+		delete(w.weights, victim.key)
+		c.remove(victim)
+	}
+	return true
 }
 ```
 

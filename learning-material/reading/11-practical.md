@@ -26,24 +26,25 @@ This is the path-resolution core, not a complete filesystem. The caller splits a
 
 ```go
 type FSNode struct {
-    IsFile bool
-    Content string
-    Children map[string]*FSNode
+	IsFile   bool
+	Content  string
+	Children map[string]*FSNode
 }
 
 func Resolve(root *FSNode,
-    parts []string) (*FSNode, bool) {
-    current := root
-    for _, name := range parts {
-        if current == nil || current.IsFile {
-            return nil, false
-        }
-        current = current.Children[name]
-        if current == nil {
-            return nil, false
-        }
-    }
-    return current, current != nil
+	parts []string) (*FSNode, bool) {
+	current := root
+	for _, name := range parts {
+		// A file cannot serve as an intermediate directory.
+		if current == nil || current.IsFile {
+			return nil, false
+		}
+		current = current.Children[name]
+		if current == nil {
+			return nil, false
+		}
+	}
+	return current, current != nil
 }
 ```
 
@@ -75,24 +76,25 @@ Committing inner merges into outer; it must not delete base A yet. Otherwise out
 
 ```go
 type Edit struct {
-    Value string
-    Deleted bool
+	Value   string
+	Deleted bool
 }
 
 func ReadLayered(base map[string]string,
-    layers []map[string]Edit, key string) (string, bool) {
-    for i := len(layers)-1; i >= 0; i-- {
-        edit, found := layers[i][key]
-        if !found {
-            continue
-        }
-        if edit.Deleted {
-            return "", false
-        }
-        return edit.Value, true
-    }
-    value, found := base[key]
-    return value, found
+	layers []map[string]Edit, key string) (string, bool) {
+	for i := len(layers) - 1; i >= 0; i-- {
+		edit, found := layers[i][key]
+		if !found {
+			continue
+		}
+		if edit.Deleted {
+			// A tombstone hides every older value.
+			return "", false
+		}
+		return edit.Value, true
+	}
+	value, found := base[key]
+	return value, found
 }
 ```
 
@@ -104,35 +106,38 @@ The following complete transaction stack initializes base lazily. Begin pushes a
 
 ```go
 type TransactionStore struct {
-    base map[string]string
-    layers []map[string]Edit
+	base   map[string]string
+	layers []map[string]Edit
 }
 
 func (s *TransactionStore) Begin() {
-    s.layers = append(s.layers, make(map[string]Edit))
+	s.layers = append(s.layers, make(map[string]Edit))
 }
 
 func (s *TransactionStore) Change(key string, edit Edit) {
-    if len(s.layers) > 0 {
-        s.layers[len(s.layers)-1][key] = edit
-        return
-    }
-    if s.base == nil {
-        s.base = make(map[string]string)
-    }
-    if edit.Deleted {
-        delete(s.base, key)
-    } else {
-        s.base[key] = edit.Value
-    }
+	if len(s.layers) > 0 {
+		s.layers[len(s.layers)-1][key] = edit
+		return
+	}
+	if s.base == nil {
+		s.base = make(map[string]string)
+	}
+	if edit.Deleted {
+		delete(s.base, key)
+	} else {
+		s.base[key] = edit.Value
+	}
 }
 
 func (s *TransactionStore) Rollback() bool {
-    if len(s.layers) == 0 {
-        return false
-    }
-    s.layers = s.layers[:len(s.layers)-1]
-    return true
+	if len(s.layers) == 0 {
+		return false
+	}
+	last := len(s.layers) - 1
+	// Release the discarded map from the backing array.
+	s.layers[last] = nil
+	s.layers = s.layers[:last]
+	return true
 }
 ```
 
@@ -140,23 +145,26 @@ Commit reuses Change after removing the newest layer, so Change naturally target
 
 ```go
 func (s *TransactionStore) Commit() bool {
-    if len(s.layers) == 0 {
-        return false
-    }
-    top := s.layers[len(s.layers)-1]
-    s.layers = s.layers[:len(s.layers)-1]
-    for key, edit := range top {
-        s.Change(key, edit)
-    }
-    return true
+	if len(s.layers) == 0 {
+		return false
+	}
+	last := len(s.layers) - 1
+	top := s.layers[last]
+	s.layers[last] = nil
+	s.layers = s.layers[:last]
+	// Change now targets the parent overlay or the base.
+	for key, edit := range top {
+		s.Change(key, edit)
+	}
+	return true
 }
 
 func (s *TransactionStore) Get(key string) (string, bool) {
-    return ReadLayered(s.base, s.layers, key)
+	return ReadLayered(s.base, s.layers, key)
 }
 ```
 
-A read costs expected O(transaction depth); commit costs O(changes in the top layer). Rollback logically discards a layer in O(1), excluding later garbage collection. Call Commit or Rollback without an active transaction and receive false, with no mutation. Concurrency needs an explicit session/isolation contract before adding locks around this shared stack.
+A read costs expected O(transaction depth); commit costs O(changes in the top layer). Rollback discards a layer in O(1), excluding later garbage collection. Clearing the removed slice slot prevents its backing array from retaining the overlay map. Call Commit or Rollback without an active transaction and receive false, with no mutation. Concurrency needs an explicit session/isolation contract before adding locks around this shared stack.
 
 ## Pub/sub: callbacks need a delivery snapshot
 
@@ -179,20 +187,21 @@ The core below accepts a prebuilt registry and promises no callback order. Mutat
 
 ```go
 type TopicBus struct {
-    mu sync.Mutex
-    callbacks map[string]map[int]func(string)
+	mu        sync.Mutex
+	callbacks map[string]map[int]func(string)
 }
 
 func (b *TopicBus) Publish(topic, message string) {
-    b.mu.Lock()
-    var snapshot []func(string)
-    for _, callback := range b.callbacks[topic] {
-        snapshot = append(snapshot, callback)
-    }
-    b.mu.Unlock()
-    for _, callback := range snapshot {
-        callback(message)
-    }
+	b.mu.Lock()
+	var snapshot []func(string)
+	for _, callback := range b.callbacks[topic] {
+		snapshot = append(snapshot, callback)
+	}
+	b.mu.Unlock()
+	// Callbacks may safely change subscriptions after unlock.
+	for _, callback := range snapshot {
+		callback(message)
+	}
 }
 ```
 

@@ -25,26 +25,27 @@ The function below ranks already distinct eligible candidates. It copies before 
 
 ```go
 type Candidate struct {
-    ID string
-    Score int64
+	ID    string
+	Score int64
 }
 
 func TopTitles(candidates []Candidate, k int) []Candidate {
-    if k <= 0 {
-        return nil
-    }
-    ranked := append([]Candidate(nil), candidates...)
-    sort.Slice(ranked, func(i, j int) bool {
-        a, b := ranked[i], ranked[j]
-        if a.Score != b.Score {
-            return a.Score > b.Score
-        }
-        return a.ID < b.ID
-    })
-    if k < len(ranked) {
-        ranked = ranked[:k]
-    }
-    return ranked
+	if k <= 0 {
+		return nil
+	}
+	ranked := append([]Candidate(nil), candidates...)
+	sort.Slice(ranked, func(i, j int) bool {
+		a, b := ranked[i], ranked[j]
+		if a.Score != b.Score {
+			return a.Score > b.Score
+		}
+		// Resolve ties before truncating to k winners.
+		return a.ID < b.ID
+	})
+	if k < len(ranked) {
+		ranked = ranked[:k]
+	}
+	return ranked
 }
 ```
 
@@ -54,34 +55,35 @@ For `[(D,7), (A,9), (C,7)]`, k=2, output is `[(A,9), (C,7)]`. The equal-score ti
 
 ```go
 type CatalogCandidate struct {
-    ID, Genre string
-    Score int64
-    Eligible bool
+	ID, Genre string
+	Score     int64
+	Eligible  bool
 }
 
 func RankEligible(input []CatalogCandidate,
-    watched map[string]bool, k int) []Candidate {
-    if k <= 0 {
-        return nil
-    }
-    unique := make(map[string]CatalogCandidate)
-    for _, item := range input {
-        if !item.Eligible || watched[item.ID] {
-            continue
-        }
-        old, found := unique[item.ID]
-        if !found || item.Score > old.Score ||
-            (item.Score == old.Score &&
-                item.Genre < old.Genre) {
-            unique[item.ID] = item
-        }
-    }
-    candidates := make([]Candidate, 0, len(unique))
-    for _, item := range unique {
-        candidates = append(candidates,
-            Candidate{item.ID, item.Score})
-    }
-    return TopTitles(candidates, k)
+	watched map[string]bool, k int) []Candidate {
+	if k <= 0 {
+		return nil
+	}
+	unique := make(map[string]CatalogCandidate)
+	for _, item := range input {
+		// Filter before an ID can occupy a result slot.
+		if !item.Eligible || watched[item.ID] {
+			continue
+		}
+		old, found := unique[item.ID]
+		if !found || item.Score > old.Score ||
+			(item.Score == old.Score &&
+				item.Genre < old.Genre) {
+			unique[item.ID] = item
+		}
+	}
+	candidates := make([]Candidate, 0, len(unique))
+	for _, item := range unique {
+		candidates = append(candidates,
+			Candidate{ID: item.ID, Score: item.Score})
+	}
+	return TopTitles(candidates, k)
 }
 ```
 
@@ -89,7 +91,7 @@ For n input records and u distinct survivors, expected time is O(n+u log u), spa
 
 ## Worked example: diversity needs candidates below the original cutoff
 
-**Problem.** Choose k=2 distinct titles with at most one from each genre. Candidates are `[(A,action,10), (B,action,9), (C,drama,8)]`. Ordinary top 2 gives A and B, violating the rule. The constrained answer is A and C.
+**Problem.** Choose k=2 distinct titles with at most one from each genre. Fill as many slots as possible up to k, then maximize total score for that count. Candidates are `[(A,action,10), (B,action,9), (C,drama,8)]`. Ordinary top 2 gives A and B, violating the rule. The constrained answer is A and C.
 
 | Candidate in score order | Chosen so far | Decision |
 | --- | --- | --- |
@@ -97,34 +99,34 @@ For n input records and u distinct survivors, expected time is O(n+u log u), spa
 | B, action, 9 | `[A]` | Skip used genre |
 | C, drama, 8 | `[A, C]` | Fill second genre |
 
-With exactly one disjoint genre per title, sorting all distinct eligible candidates and accepting while genre quota permits maximizes score. This core assumes identity/eligibility have already been resolved.
+With exactly one disjoint genre per title, sorting all distinct eligible candidates and accepting while genre quota permits maximizes score for the required count. This core assumes identity/eligibility have already been resolved. Negative scores still fill available slots under this contract; if selecting fewer titles is allowed solely to maximize total score, skip negative scores instead.
 
 ```go
 func GenreWinners(input []CatalogCandidate,
-    k int) []CatalogCandidate {
-    if k <= 0 {
-        return nil
-    }
-    ranked := append([]CatalogCandidate(nil), input...)
-    sort.Slice(ranked, func(i, j int) bool {
-        if ranked[i].Score != ranked[j].Score {
-            return ranked[i].Score > ranked[j].Score
-        }
-        return ranked[i].ID < ranked[j].ID
-    })
-    used := make(map[string]bool)
-    var out []CatalogCandidate
-    for _, item := range ranked {
-        if used[item.Genre] {
-            continue
-        }
-        used[item.Genre] = true
-        out = append(out, item)
-        if len(out) == k {
-            break
-        }
-    }
-    return out
+	k int) []CatalogCandidate {
+	if k <= 0 {
+		return nil
+	}
+	ranked := append([]CatalogCandidate(nil), input...)
+	sort.Slice(ranked, func(i, j int) bool {
+		if ranked[i].Score != ranked[j].Score {
+			return ranked[i].Score > ranked[j].Score
+		}
+		return ranked[i].ID < ranked[j].ID
+	})
+	used := make(map[string]bool)
+	var out []CatalogCandidate
+	for _, item := range ranked {
+		if used[item.Genre] {
+			continue
+		}
+		used[item.Genre] = true
+		out = append(out, item)
+		if len(out) == k {
+			break
+		}
+	}
+	return out
 }
 ```
 
@@ -146,31 +148,32 @@ Scores are `{C: 2, D: 1}`. Repeated views are deduplicated within each history s
 
 ```go
 func CollaborativeScores(target []string,
-    neighbors [][]string) map[string]int64 {
-    watched := make(map[string]bool)
-    for _, id := range target {
-        watched[id] = true
-    }
-    scores := make(map[string]int64)
-    for _, history := range neighbors {
-        distinct := make(map[string]bool)
-        var weight int64
-        for _, id := range history {
-            if !distinct[id] && watched[id] {
-                weight++
-            }
-            distinct[id] = true
-        }
-        if weight == 0 {
-            continue
-        }
-        for id := range distinct {
-            if !watched[id] {
-                scores[id] += weight
-            }
-        }
-    }
-    return scores
+	neighbors [][]string) map[string]int64 {
+	watched := make(map[string]bool)
+	for _, id := range target {
+		watched[id] = true
+	}
+	scores := make(map[string]int64)
+	for _, history := range neighbors {
+		distinct := make(map[string]bool)
+		var weight int64
+		for _, id := range history {
+			// Repeated views count once toward similarity.
+			if !distinct[id] && watched[id] {
+				weight++
+			}
+			distinct[id] = true
+		}
+		if weight == 0 {
+			continue
+		}
+		for id := range distinct {
+			if !watched[id] {
+				scores[id] += weight
+			}
+		}
+	}
+	return scores
 }
 ```
 
@@ -184,39 +187,40 @@ For A's durations `[10, 2]`, average is 6. When 10 expires, subtract it and decr
 
 ```go
 type StatEvent struct {
-    At int64
-    Title string
-    Minutes int64
+	At      int64
+	Title   string
+	Minutes int64
 }
 
 type VideoTotal struct {
-    Sum int64
-    Count int
+	Sum   int64
+	Count int
 }
 
 type RollingStats struct {
-    Window int64
-    events []StatEvent
-    totals map[string]VideoTotal
+	Window int64
+	events []StatEvent
+	totals map[string]VideoTotal
 }
 
 func (s *RollingStats) Expire(now int64) {
-    expired := 0
-    for expired < len(s.events) &&
-        s.events[expired].At <= now-s.Window {
-        e := s.events[expired]
-        total := s.totals[e.Title]
-        total.Sum -= e.Minutes
-        total.Count--
-        if total.Count == 0 {
-            delete(s.totals, e.Title)
-        } else {
-            s.totals[e.Title] = total
-        }
-        s.events[expired] = StatEvent{}
-        expired++
-    }
-    s.events = s.events[expired:]
+	expired := 0
+	for expired < len(s.events) &&
+		s.events[expired].At <= now-s.Window {
+		e := s.events[expired]
+		// Undo both parts of the average, not just the sum.
+		total := s.totals[e.Title]
+		total.Sum -= e.Minutes
+		total.Count--
+		if total.Count == 0 {
+			delete(s.totals, e.Title)
+		} else {
+			s.totals[e.Title] = total
+		}
+		s.events[expired] = StatEvent{}
+		expired++
+	}
+	s.events = s.events[expired:]
 }
 ```
 
@@ -224,29 +228,29 @@ Clearing consumed records releases title references. A long-lived queue also nee
 
 ```go
 func (s *RollingStats) Record(e StatEvent) bool {
-    if e.Minutes <= 0 {
-        return false
-    }
-    s.Expire(e.At)
-    if s.totals == nil {
-        s.totals = make(map[string]VideoTotal)
-    }
-    total := s.totals[e.Title]
-    total.Sum += e.Minutes
-    total.Count++
-    s.totals[e.Title] = total
-    s.events = append(s.events, e)
-    return true
+	if e.Minutes <= 0 {
+		return false
+	}
+	s.Expire(e.At)
+	if s.totals == nil {
+		s.totals = make(map[string]VideoTotal)
+	}
+	total := s.totals[e.Title]
+	total.Sum += e.Minutes
+	total.Count++
+	s.totals[e.Title] = total
+	s.events = append(s.events, e)
+	return true
 }
 
 func (s *RollingStats) Average(title string,
-    now int64) (float64, bool) {
-    s.Expire(now)
-    total, found := s.totals[title]
-    if !found {
-        return 0, false
-    }
-    return float64(total.Sum)/float64(total.Count), true
+	now int64) (float64, bool) {
+	s.Expire(now)
+	total, found := s.totals[title]
+	if !found {
+		return 0, false
+	}
+	return float64(total.Sum) / float64(total.Count), true
 }
 ```
 

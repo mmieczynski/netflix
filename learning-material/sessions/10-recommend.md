@@ -26,7 +26,7 @@ No. The original top k may all belong to one genre, while the best allowed candi
 
 ## Constraints change what top k means
 
-For a single disjoint genre per movie and a cap of one per genre, keeping the best movie of each genre and then selecting the best k genre winners maximizes total score. For a cap greater than one, sorted greedy acceptance respects the per-genre quota. If movies have multiple overlapping tags and several simultaneous quotas, a simple greedy strategy need not be globally optimal. State whether you are maximizing score exactly or applying a reasonable reranking heuristic.
+For a single disjoint genre per movie and a cap of one per genre, keeping the best movie of each genre and then selecting the best k genre winners maximizes total score for that count. Here we fill as many slots as possible up to k, even if scores are negative. If the only objective is maximum total score and fewer selections are allowed, skip negative scores. For a cap greater than one, sorted greedy acceptance respects the per-genre quota. If movies have multiple overlapping tags and several simultaneous quotas, a simple greedy strategy need not be globally optimal. State whether you are maximizing score exactly or applying a reasonable reranking heuristic.
 
 Another common follow-up asks to interleave two ranked lists while removing duplicates. Two pointers with a seen set can preserve a chosen alternation policy. This does not necessarily preserve global score order. Define whether fairness between sources or highest overall scores has priority. If each source is sorted and global score order is required, a heap across source heads gives a k-way merge.
 
@@ -90,7 +90,7 @@ No. The heap is bounded by five, but the map grows with the number of unique eli
 
 #### Worked answer — Explanation and next challenge
 
-You may return only one title even though good candidates from other genres exist below the original cutoff. Selection must consider the constraint while it still has access to enough candidates. With exactly one genre per title and a cap of one, choosing the best representative of each genre before selecting across genres is sufficient for maximum total score.
+You may return only one title even though good candidates from other genres exist below the original cutoff. Selection must consider the constraint while it still has access to enough candidates. With exactly one genre per title and a cap of one, choosing the best representative of each genre before selecting across genres is sufficient for maximum total score at the required result count.
 
 **Round 7.** Now titles can have several overlapping tags, with limits across tags. Why should you be cautious about claiming a simple greedy ranking is globally optimal?
 
@@ -140,6 +140,6 @@ For the baseline, collect the map values and sort using the final comparison. Re
 
 On A score eight, B nine, A ten, C nine, with B watched and k two, the canonical map contains A ten and C nine, so return A then C. If A and C tie, A still comes first. Test duplicate IDs, no eligible records, k larger than the result, and all equal scores. The comparison rule should give the same result regardless of map iteration order.
 
-Expected scan cost is linear. Sorting all unique candidates costs u log u; a bounded heap costs u log k plus sorting the final k. Both versions still retain the deduplication map, so their total auxiliary memory is not merely k. A one-per-genre rule changes selection: keep each genre's best representative before global selection, provided each title belongs to exactly one genre and the objective is the sum of these supplied scores.
+Expected scan cost is linear. Sorting all unique candidates costs u log u; a bounded heap costs u log k plus sorting the final k. Both versions still retain the deduplication map, so their total auxiliary memory is not merely k. A one-per-genre rule changes selection: keep each genre's best representative before global selection, provided each title belongs to exactly one genre and the objective is to fill the available slots up to k, then maximize their total score.
 
 **Optional spoken walkthrough:** describe separate helpers for eligibility, duplicate resolution, and final comparison. Then explain why the heap comparison is the reverse of the final ranking, including its tie rule.

@@ -28,31 +28,34 @@ A head index avoids repeatedly shifting the entire queue. Periodic compaction co
 
 ```go
 type WindowLimiter struct {
-    Window int64
-    Limit int
-    accepted []int64
-    head int
+	Window   int64
+	Limit    int
+	accepted []int64
+	head     int
 }
 
 func (l *WindowLimiter) Allow(now int64) bool {
-    if l.Window <= 0 || l.Limit <= 0 {
-        return false
-    }
-    cutoff := now-l.Window
-    for l.head < len(l.accepted) &&
-        l.accepted[l.head] <= cutoff {
-        l.head++
-    }
-    if l.head > 0 && l.head*2 >= len(l.accepted) {
-        l.accepted = append([]int64(nil),
-            l.accepted[l.head:]...)
-        l.head = 0
-    }
-    if len(l.accepted)-l.head >= l.Limit {
-        return false
-    }
-    l.accepted = append(l.accepted, now)
-    return true
+	if l.Window <= 0 || l.Limit <= 0 {
+		return false
+	}
+	cutoff := now - l.Window
+	// The left window boundary is excluded.
+	for l.head < len(l.accepted) &&
+		l.accepted[l.head] <= cutoff {
+		l.head++
+	}
+	if l.head > 0 && l.head*2 >= len(l.accepted) {
+		// Reclaim consumed storage without copying each time.
+		l.accepted = append([]int64(nil),
+			l.accepted[l.head:]...)
+		l.head = 0
+	}
+	if len(l.accepted)-l.head >= l.Limit {
+		return false
+	}
+	// Rejected attempts never enter the accepted log.
+	l.accepted = append(l.accepted, now)
+	return true
 }
 ```
 
@@ -66,30 +69,31 @@ Store a limiter per user. Protect creation, pruning, checking, and recording as 
 
 ```go
 type UserLimiter struct {
-    mu sync.Mutex
-    users map[string]*WindowLimiter
-    Window int64
-    Limit int
+	mu     sync.Mutex
+	users  map[string]*WindowLimiter
+	Window int64
+	Limit  int
 }
 
 func (u *UserLimiter) Allow(user string, now int64) bool {
-    u.mu.Lock()
-    defer u.mu.Unlock()
-    if u.users == nil {
-        u.users = make(map[string]*WindowLimiter)
-    }
-    limiter := u.users[user]
-    if limiter == nil {
-        limiter = &WindowLimiter{
-            Window: u.Window, Limit: u.Limit,
-        }
-        u.users[user] = limiter
-    }
-    return limiter.Allow(now)
+	// Creation and admission share one atomic decision.
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.users == nil {
+		u.users = make(map[string]*WindowLimiter)
+	}
+	limiter := u.users[user]
+	if limiter == nil {
+		limiter = &WindowLimiter{
+			Window: u.Window, Limit: u.Limit,
+		}
+		u.users[user] = limiter
+	}
+	return limiter.Allow(now)
 }
 ```
 
-Time remains monotone for each user's call order. Immutable configuration and the lock preserve the admission invariant. U active users require O(U*L) timestamp storage, plus per-user maps and slice overhead. With 20 million full queues and L=100, bare 8-byte timestamps alone require 16 billion bytes. This is an illustrative bound, not a measured workload.
+Time remains monotone for each user's serialized call order. With concurrent callers, timestamps sampled before acquiring the lock can arrive out of order; an injected server clock sampled under this lock avoids that problem. Immutable configuration and the lock preserve the admission invariant. U active users require O(U*L) timestamp storage, plus per-user maps and slice overhead. With 20 million full queues and L=100, bare 8-byte timestamps alone require 16 billion bytes. This is an illustrative bound, not a measured workload.
 
 The sample retains users indefinitely. An idle-state policy can remove a user once every counted request has expired, because recreating an empty log preserves future behavior. Shards or per-user locks reduce contention, but creation and deletion of shared state must also be coordinated.
 
@@ -99,27 +103,28 @@ The sample retains users indefinitely. An idle-state policy can remove a user on
 
 ```go
 type FixedLimiter struct {
-    Window int64
-    Limit int
-    bucket int64
-    count int
-    initialized bool
+	Window      int64
+	Limit       int
+	bucket      int64
+	count       int
+	initialized bool
 }
 
 func (f *FixedLimiter) Allow(now int64) bool {
-    if f.Window <= 0 || f.Limit <= 0 || now < 0 {
-        return false
-    }
-    bucket := now/f.Window
-    if !f.initialized || bucket != f.bucket {
-        f.bucket, f.count = bucket, 0
-        f.initialized = true
-    }
-    if f.count >= f.Limit {
-        return false
-    }
-    f.count++
-    return true
+	if f.Window <= 0 || f.Limit <= 0 || now < 0 {
+		return false
+	}
+	bucket := now / f.Window
+	if !f.initialized || bucket != f.bucket {
+		// Each aligned window starts a separate allowance.
+		f.bucket, f.count = bucket, 0
+		f.initialized = true
+	}
+	if f.count >= f.Limit {
+		return false
+	}
+	f.count++
+	return true
 }
 ```
 
@@ -144,32 +149,33 @@ At time 1, refill only the 0.5 seconds since the last balance update. Reusing th
 
 ```go
 type TokenBucket struct {
-    Capacity, Rate float64
-    tokens, last float64
+	Capacity, Rate float64
+	tokens, last   float64
 }
 
 func NewTokenBucket(capacity, rate,
-    now float64) *TokenBucket {
-    return &TokenBucket{
-        Capacity: capacity, Rate: rate,
-        tokens: capacity, last: now,
-    }
+	now float64) *TokenBucket {
+	return &TokenBucket{
+		Capacity: capacity, Rate: rate,
+		tokens: capacity, last: now,
+	}
 }
 
 func (b *TokenBucket) Allow(now float64) bool {
-    if now < b.last {
-        now = b.last
-    }
-    b.tokens += (now-b.last)*b.Rate
-    if b.tokens > b.Capacity {
-        b.tokens = b.Capacity
-    }
-    b.last = now
-    if b.tokens < 1 {
-        return false
-    }
-    b.tokens--
-    return true
+	if now < b.last {
+		now = b.last
+	}
+	b.tokens += (now - b.last) * b.Rate
+	if b.tokens > b.Capacity {
+		b.tokens = b.Capacity
+	}
+	// Advance on rejection too; never count refill twice.
+	b.last = now
+	if b.tokens < 1 {
+		return false
+	}
+	b.tokens--
+	return true
 }
 ```
 

@@ -29,20 +29,21 @@ A first-in-first-out queue processes distance 0, then distance 1, then distance 
 
 ```go
 func HopDistances(edges map[string][]string,
-    start string) map[string]int {
-    distance := map[string]int{start: 0}
-    queue := []string{start}
-    for head := 0; head < len(queue); head++ {
-        from := queue[head]
-        for _, to := range edges[from] {
-            if _, seen := distance[to]; seen {
-                continue
-            }
-            distance[to] = distance[from] + 1
-            queue = append(queue, to)
-        }
-    }
-    return distance
+	start string) map[string]int {
+	distance := map[string]int{start: 0}
+	queue := []string{start}
+	for head := 0; head < len(queue); head++ {
+		from := queue[head]
+		for _, to := range edges[from] {
+			if _, seen := distance[to]; seen {
+				continue
+			}
+			// Mark now so other parents skip this vertex.
+			distance[to] = distance[from] + 1
+			queue = append(queue, to)
+		}
+	}
+	return distance
 }
 ```
 
@@ -58,33 +59,34 @@ Capture queue length at the beginning of each level. Nodes appended during that 
 
 ```go
 type TreeNode struct {
-    Value int
-    Left, Right *TreeNode
+	Value       int
+	Left, Right *TreeNode
 }
 
 func TreeLevels(root *TreeNode) [][]int {
-    if root == nil {
-        return nil
-    }
-    queue := []*TreeNode{root}
-    var levels [][]int
-    for head := 0; head < len(queue); {
-        end := len(queue)
-        var level []int
-        for head < end {
-            n := queue[head]
-            head++
-            level = append(level, n.Value)
-            if n.Left != nil {
-                queue = append(queue, n.Left)
-            }
-            if n.Right != nil {
-                queue = append(queue, n.Right)
-            }
-        }
-        levels = append(levels, level)
-    }
-    return levels
+	if root == nil {
+		return nil
+	}
+	queue := []*TreeNode{root}
+	var levels [][]int
+	for head := 0; head < len(queue); {
+		// Newly enqueued children belong to the next level.
+		end := len(queue)
+		var level []int
+		for head < end {
+			n := queue[head]
+			head++
+			level = append(level, n.Value)
+			if n.Left != nil {
+				queue = append(queue, n.Left)
+			}
+			if n.Right != nil {
+				queue = append(queue, n.Right)
+			}
+		}
+		levels = append(levels, level)
+	}
+	return levels
 }
 ```
 
@@ -100,22 +102,23 @@ Inorder traversal visits left, node, right. A valid BST with no duplicates produ
 
 ```go
 func IsBST(root *TreeNode) bool {
-    previous, havePrevious := 0, false
-    var visit func(*TreeNode) bool
-    visit = func(n *TreeNode) bool {
-        if n == nil {
-            return true
-        }
-        if !visit(n.Left) {
-            return false
-        }
-        if havePrevious && n.Value <= previous {
-            return false
-        }
-        previous, havePrevious = n.Value, true
-        return visit(n.Right)
-    }
-    return visit(root)
+	previous, havePrevious := 0, false
+	var visit func(*TreeNode) bool
+	visit = func(n *TreeNode) bool {
+		if n == nil {
+			return true
+		}
+		if !visit(n.Left) {
+			return false
+		}
+		// Inorder values must increase across subtree edges.
+		if havePrevious && n.Value <= previous {
+			return false
+		}
+		previous, havePrevious = n.Value, true
+		return visit(n.Right)
+	}
+	return visit(root)
 }
 ```
 
@@ -131,38 +134,38 @@ Scan every cell. Each unvisited land cell starts one new component; a stack expl
 
 ```go
 func IslandCount(grid [][]byte) int {
-    if len(grid) == 0 || len(grid[0]) == 0 {
-        return 0
-    }
-    rows, cols := len(grid), len(grid[0])
-    directions := [][2]int{{1, 0}, {-1, 0},
-        {0, 1}, {0, -1}}
-    count := 0
-    for r := 0; r < rows; r++ {
-        for c := 0; c < cols; c++ {
-            if grid[r][c] != '1' {
-                continue
-            }
-            count++
-            grid[r][c] = '0'
-            stack := [][2]int{{r, c}}
-            for len(stack) > 0 {
-                p := stack[len(stack)-1]
-                stack = stack[:len(stack)-1]
-                for _, d := range directions {
-                    nr, nc := p[0]+d[0], p[1]+d[1]
-                    if nr < 0 || nr >= rows ||
-                        nc < 0 || nc >= cols ||
-                        grid[nr][nc] != '1' {
-                        continue
-                    }
-                    grid[nr][nc] = '0'
-                    stack = append(stack, [2]int{nr, nc})
-                }
-            }
-        }
-    }
-    return count
+	if len(grid) == 0 || len(grid[0]) == 0 {
+		return 0
+	}
+	rows, cols := len(grid), len(grid[0])
+	directions := [][2]int{{1, 0}, {-1, 0},
+		{0, 1}, {0, -1}}
+	count := 0
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			if grid[r][c] != '1' {
+				continue
+			}
+			count++
+			grid[r][c] = '0'
+			stack := [][2]int{{r, c}}
+			for len(stack) > 0 {
+				p := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				for _, d := range directions {
+					nr, nc := p[0]+d[0], p[1]+d[1]
+					if nr < 0 || nr >= rows ||
+						nc < 0 || nc >= cols ||
+						grid[nr][nc] != '1' {
+						continue
+					}
+					grid[nr][nc] = '0'
+					stack = append(stack, [2]int{nr, nc})
+				}
+			}
+		}
+	}
+	return count
 }
 ```
 
@@ -187,34 +190,35 @@ This complete function uses integer job IDs `[0, n)`. Edges are `[prerequisite, 
 
 ```go
 func JobOrder(n int, edges [][2]int) ([]int, bool) {
-    if n < 0 {
-        return nil, false
-    }
-    next := make([][]int, n)
-    pending := make([]int, n)
-    for _, e := range edges {
-        if e[0] < 0 || e[0] >= n ||
-            e[1] < 0 || e[1] >= n {
-            return nil, false
-        }
-        next[e[0]] = append(next[e[0]], e[1])
-        pending[e[1]]++
-    }
-    var ready []int
-    for id, count := range pending {
-        if count == 0 {
-            ready = append(ready, id)
-        }
-    }
-    for head := 0; head < len(ready); head++ {
-        for _, id := range next[ready[head]] {
-            pending[id]--
-            if pending[id] == 0 {
-                ready = append(ready, id)
-            }
-        }
-    }
-    return ready, len(ready) == n
+	if n < 0 {
+		return nil, false
+	}
+	next := make([][]int, n)
+	pending := make([]int, n)
+	for _, e := range edges {
+		if e[0] < 0 || e[0] >= n ||
+			e[1] < 0 || e[1] >= n {
+			return nil, false
+		}
+		next[e[0]] = append(next[e[0]], e[1])
+		pending[e[1]]++
+	}
+	var ready []int
+	for id, count := range pending {
+		if count == 0 {
+			ready = append(ready, id)
+		}
+	}
+	for head := 0; head < len(ready); head++ {
+		for _, id := range next[ready[head]] {
+			pending[id]--
+			if pending[id] == 0 {
+				// All prerequisites have now been processed.
+				ready = append(ready, id)
+			}
+		}
+	}
+	return ready, len(ready) == n
 }
 ```
 
@@ -226,30 +230,31 @@ Isolated jobs are included by initialization. Add `D -> A` and the cycle blocks 
 
 ```go
 type GraphNode struct {
-    Label string
-    Neighbors []*GraphNode
+	Label     string
+	Neighbors []*GraphNode
 }
 
 func CloneGraph(start *GraphNode) *GraphNode {
-    copied := make(map[*GraphNode]*GraphNode)
-    var clone func(*GraphNode) *GraphNode
-    clone = func(n *GraphNode) *GraphNode {
-        if n == nil {
-            return nil
-        }
-        if copy, found := copied[n]; found {
-            return copy
-        }
-        copy := &GraphNode{Label: n.Label}
-        copied[n] = copy
-        for _, neighbor := range n.Neighbors {
-            copy.Neighbors = append(copy.Neighbors,
-                clone(neighbor))
-        }
-        return copy
-    }
-    return clone(start)
+	copied := make(map[*GraphNode]*GraphNode)
+	var clone func(*GraphNode) *GraphNode
+	clone = func(n *GraphNode) *GraphNode {
+		if n == nil {
+			return nil
+		}
+		if existing, found := copied[n]; found {
+			return existing
+		}
+		duplicate := &GraphNode{Label: n.Label}
+		// Register before recursion to terminate cycles.
+		copied[n] = duplicate
+		for _, neighbor := range n.Neighbors {
+			duplicate.Neighbors = append(duplicate.Neighbors,
+				clone(neighbor))
+		}
+		return duplicate
+	}
+	return clone(start)
 }
 ```
 
-For `A -> B -> A`, registering the copy of A before copying B lets B's back-edge reuse that copy. Late registration would recurse forever. Each reachable node is copied once, giving O(V+E) time and space. Discovery, readiness, and clone identity are distinct meanings of visited state; name the meaning your task needs.
+For `A -> B -> A`, register A's copy before following B's back-edge so it reuses the copy. Late registration would recurse forever. Copying each reachable node once takes O(V+E) time and space. Keep discovery, readiness, and clone identity distinct.

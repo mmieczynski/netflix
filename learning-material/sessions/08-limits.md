@@ -42,6 +42,8 @@ Refill must account for rejected requests too: update the timestamp whenever you
 
 Two simultaneous requests can both observe one remaining slot and both accept unless prune, check, and append form one atomic operation. A mutex solves this inside a process. Per-user locks or shards can improve concurrency when required, but map creation and lock lifetime must still be coordinated. Token refill, check, and debit likewise need one critical section.
 
+Time must also follow that serialized operation order. Two callers can sample increasing timestamps before locking but acquire the lock in reverse order. Sampling an injected server clock inside the same critical section preserves the ordering needed for FIFO expiry.
+
 Independent per-server limiters can multiply a user's global allowance. A shared atomic decision, stable ownership of each user's state, or intentionally partitioned quotas can address that, with different availability and utilization trade-offs. A distributed system discussion should name failure policy: if the limiter's state service is unavailable, does the request pass or fail? No single answer is correct for every service.
 
 ## Start from the guarantee a caller should observe

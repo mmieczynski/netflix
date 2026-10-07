@@ -15,34 +15,36 @@ The cubic baseline tries every triple. Sort to `[-4, -1, -1, 0, 1, 2]`, fix one 
 
 ```go
 func ThreeZero(nums []int) [][3]int {
-    a := append([]int(nil), nums...)
-    sort.Ints(a)
-    var out [][3]int
-    for i := 0; i+2 < len(a); i++ {
-        if i > 0 && a[i] == a[i-1] {
-            continue
-        }
-        left, right := i+1, len(a)-1
-        for left < right {
-            sum := a[i] + a[left] + a[right]
-            if sum < 0 {
-                left++
-            } else if sum > 0 {
-                right--
-            } else {
-                out = append(out,
-                    [3]int{a[i], a[left], a[right]})
-                x, y := a[left], a[right]
-                for left < right && a[left] == x {
-                    left++
-                }
-                for left < right && a[right] == y {
-                    right--
-                }
-            }
-        }
-    }
-    return out
+	// Sorting a copy preserves the caller's input order.
+	a := append([]int(nil), nums...)
+	sort.Ints(a)
+	var out [][3]int
+	for i := 0; i+2 < len(a); i++ {
+		if i > 0 && a[i] == a[i-1] {
+			continue
+		}
+		left, right := i+1, len(a)-1
+		for left < right {
+			sum := a[i] + a[left] + a[right]
+			if sum < 0 {
+				left++
+			} else if sum > 0 {
+				right--
+			} else {
+				out = append(out,
+					[3]int{a[i], a[left], a[right]})
+				// Skip values that would repeat this triple.
+				x, y := a[left], a[right]
+				for left < right && a[left] == x {
+					left++
+				}
+				for left < right && a[right] == y {
+					right--
+				}
+			}
+		}
+	}
+	return out
 }
 ```
 
@@ -58,20 +60,21 @@ Sort by start. Keep the most recent merged interval. If the next start is at or 
 
 ```go
 func MergeCoverage(input [][2]int) [][2]int {
-    a := append([][2]int(nil), input...)
-    sort.Slice(a, func(i, j int) bool {
-        return a[i][0] < a[j][0]
-    })
-    var out [][2]int
-    for _, interval := range a {
-        last := len(out)-1
-        if last < 0 || interval[0] > out[last][1] {
-            out = append(out, interval)
-        } else if interval[1] > out[last][1] {
-            out[last][1] = interval[1]
-        }
-    }
-    return out
+	a := append([][2]int(nil), input...)
+	sort.Slice(a, func(i, j int) bool {
+		return a[i][0] < a[j][0]
+	})
+	var out [][2]int
+	for _, interval := range a {
+		last := len(out) - 1
+		if last < 0 || interval[0] > out[last][1] {
+			out = append(out, interval)
+		} else if interval[1] > out[last][1] {
+			// A nested interval must not shorten coverage.
+			out[last][1] = interval[1]
+		}
+	}
+	return out
 }
 ```
 
@@ -103,24 +106,26 @@ Search for the first timestamp greater than the query. For time 9, the predicate
 
 ```go
 type Version struct {
-    At int64
-    Value string
+	At    int64
+	Value string
 }
 
 func VersionAt(v []Version, at int64) (string, bool) {
-    lo, hi := 0, len(v)
-    for lo < hi {
-        mid := lo + (hi-lo)/2
-        if v[mid].At <= at {
-            lo = mid + 1
-        } else {
-            hi = mid
-        }
-    }
-    if lo == 0 {
-        return "", false
-    }
-    return v[lo-1].Value, true
+	// Find the first version strictly after the query.
+	lo, hi := 0, len(v)
+	for lo < hi {
+		mid := lo + (hi-lo)/2
+		if v[mid].At <= at {
+			lo = mid + 1
+		} else {
+			hi = mid
+		}
+	}
+	if lo == 0 {
+		return "", false
+	}
+	// Its predecessor is the latest eligible version.
+	return v[lo-1].Value, true
 }
 ```
 
@@ -130,27 +135,28 @@ Go's `sort.Search` expresses the same predicate and returns the length if no pos
 
 ```go
 func RotatedIndex(a []int, target int) int {
-    lo, hi := 0, len(a)-1
-    for lo <= hi {
-        mid := lo + (hi-lo)/2
-        if a[mid] == target {
-            return mid
-        }
-        if a[lo] <= a[mid] {
-            if a[lo] <= target && target < a[mid] {
-                hi = mid-1
-            } else {
-                lo = mid+1
-            }
-        } else {
-            if a[mid] < target && target <= a[hi] {
-                lo = mid+1
-            } else {
-                hi = mid-1
-            }
-        }
-    }
-    return -1
+	lo, hi := 0, len(a)-1
+	for lo <= hi {
+		mid := lo + (hi-lo)/2
+		if a[mid] == target {
+			return mid
+		}
+		if a[lo] <= a[mid] {
+			// The left half is sorted, so test its bounds.
+			if a[lo] <= target && target < a[mid] {
+				hi = mid - 1
+			} else {
+				lo = mid + 1
+			}
+		} else {
+			if a[mid] < target && target <= a[hi] {
+				lo = mid + 1
+			} else {
+				hi = mid - 1
+			}
+		}
+	}
+	return -1
 }
 ```
 
@@ -178,16 +184,16 @@ The table sorts for display; the heap need not. Here is the upward repair used b
 
 ```go
 func PushMin(h []int, value int) []int {
-    h = append(h, value)
-    for i := len(h)-1; i > 0; {
-        parent := (i-1)/2
-        if h[parent] <= h[i] {
-            break
-        }
-        h[parent], h[i] = h[i], h[parent]
-        i = parent
-    }
-    return h
+	h = append(h, value)
+	for i := len(h) - 1; i > 0; {
+		parent := (i - 1) / 2
+		if h[parent] <= h[i] {
+			break
+		}
+		h[parent], h[i] = h[i], h[parent]
+		i = parent
+	}
+	return h
 }
 ```
 
@@ -195,37 +201,39 @@ Replacing the root requires downward repair:
 
 ```go
 func RepairMinRoot(h []int) {
-    for i := 0; ; {
-        child := 2*i+1
-        if child >= len(h) {
-            return
-        }
-        if child+1 < len(h) && h[child+1] < h[child] {
-            child++
-        }
-        if h[i] <= h[child] {
-            return
-        }
-        h[i], h[child] = h[child], h[i]
-        i = child
-    }
+	for i := 0; ; {
+		child := 2*i + 1
+		if child >= len(h) {
+			return
+		}
+		if child+1 < len(h) && h[child+1] < h[child] {
+			// Repair through the smaller child.
+			child++
+		}
+		if h[i] <= h[child] {
+			return
+		}
+		h[i], h[child] = h[child], h[i]
+		i = child
+	}
 }
 
 func LargestK(values []int, k int) []int {
-    if k <= 0 {
-        return nil
-    }
-    var h []int
-    for _, value := range values {
-        if len(h) < k {
-            h = PushMin(h, value)
-        } else if value > h[0] {
-            h[0] = value
-            RepairMinRoot(h)
-        }
-    }
-    sort.Sort(sort.Reverse(sort.IntSlice(h)))
-    return h
+	if k <= 0 {
+		return nil
+	}
+	var h []int
+	for _, value := range values {
+		if len(h) < k {
+			h = PushMin(h, value)
+		} else if value > h[0] {
+			// The root is the weakest retained winner.
+			h[0] = value
+			RepairMinRoot(h)
+		}
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(h)))
+	return h
 }
 ```
 
@@ -239,20 +247,24 @@ A time store maps each key to an ordered `[]Version`. Set accepts nondecreasing 
 type TimeStore map[string][]Version
 
 func (s TimeStore) Set(key, value string, at int64) bool {
-    history := s[key]
-    if len(history) > 0 {
-        last := len(history)-1
-        if at < history[last].At {
-            return false
-        }
-        if at == history[last].At {
-            history[last].Value = value
-            return true
-        }
-    }
-    s[key] = append(history, Version{at, value})
-    return true
+	history := s[key]
+	if len(history) > 0 {
+		last := len(history) - 1
+		if at < history[last].At {
+			return false
+		}
+		if at == history[last].At {
+			history[last].Value = value
+			return true
+		}
+	}
+	s[key] = append(history, Version{At: at, Value: value})
+	return true
+}
+
+func (s TimeStore) Get(key string, at int64) (string, bool) {
+	return VersionAt(s[key], at)
 }
 ```
 
-Initialize the store with `make(TimeStore)`. After `Set("quality", "HD", 10)` and `Set("quality", "UHD", 20)`, querying time 15 returns HD, time 20 returns UHD, and time 9 returns missing. Set is amortized O(1) under ordered writes. Allowing arbitrary historical writes would require sorted insertion or a different ordered structure; binary search cannot repair unsorted history.
+Initialize with `make(TimeStore)`. After writes `(10, "HD")` and `(20, "UHD")` for quality, Get at 15 returns HD, at 20 returns UHD, and at 9 returns missing. Set is amortized O(1); Get is O(log m) for m versions of that key. Arbitrary write times require sorted insertion or a different ordered structure.

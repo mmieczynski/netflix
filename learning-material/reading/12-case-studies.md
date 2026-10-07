@@ -33,30 +33,30 @@ A node has stable identity, value, deadline, and two list neighbors. The map and
 
 ```go
 type metadataNode struct {
-    key, value string
-    deadline int64
-    prev, next *metadataNode
+	key, value string
+	deadline   int64
+	prev, next *metadataNode
 }
 
 type MetadataCache struct {
-    capacity int
-    clock func() int64
-    byKey map[string]*metadataNode
-    head, tail *metadataNode
+	capacity   int
+	clock      func() int64
+	byKey      map[string]*metadataNode
+	head, tail *metadataNode
 }
 
 func NewMetadataCache(capacity int,
-    clock func() int64) *MetadataCache {
-    if capacity < 0 {
-        capacity = 0
-    }
-    head, tail := &metadataNode{}, &metadataNode{}
-    head.next, tail.prev = tail, head
-    return &MetadataCache{
-        capacity: capacity, clock: clock,
-        byKey: make(map[string]*metadataNode),
-        head: head, tail: tail,
-    }
+	clock func() int64) *MetadataCache {
+	if capacity < 0 {
+		capacity = 0
+	}
+	head, tail := &metadataNode{}, &metadataNode{}
+	head.next, tail.prev = tail, head
+	return &MetadataCache{
+		capacity: capacity, clock: clock,
+		byKey: make(map[string]*metadataNode),
+		head:  head, tail: tail,
+	}
 }
 ```
 
@@ -68,27 +68,27 @@ Unlink updates only neighbor links. Promote unlinks an already resident node bef
 
 ```go
 func unlinkMetadata(n *metadataNode) {
-    n.prev.next = n.next
-    n.next.prev = n.prev
+	n.prev.next = n.next
+	n.next.prev = n.prev
 }
 
 func (c *MetadataCache) front(n *metadataNode) {
-    first := c.head.next
-    n.prev, n.next = c.head, first
-    c.head.next, first.prev = n, n
+	first := c.head.next
+	n.prev, n.next = c.head, first
+	c.head.next, first.prev = n, n
 }
 
 func (c *MetadataCache) remove(n *metadataNode) {
-    unlinkMetadata(n)
-    delete(c.byKey, n.key)
+	unlinkMetadata(n)
+	delete(c.byKey, n.key)
 }
 
 func (c *MetadataCache) expire(now int64) {
-    for _, n := range c.byKey {
-        if n.deadline <= now {
-            c.remove(n)
-        }
-    }
+	for _, n := range c.byKey {
+		if n.deadline <= now {
+			c.remove(n)
+		}
+	}
 }
 ```
 
@@ -98,17 +98,18 @@ Deleting the current map entry during Go map iteration is allowed. The scan may 
 
 ```go
 func (c *MetadataCache) Get(key string) (string, bool) {
-    n, found := c.byKey[key]
-    if !found {
-        return "", false
-    }
-    if c.clock() >= n.deadline {
-        c.remove(n)
-        return "", false
-    }
-    unlinkMetadata(n)
-    c.front(n)
-    return n.value, true
+	n, found := c.byKey[key]
+	if !found {
+		return "", false
+	}
+	if c.clock() >= n.deadline {
+		// Expiration takes precedence over recency promotion.
+		c.remove(n)
+		return "", false
+	}
+	unlinkMetadata(n)
+	c.front(n)
+	return n.value, true
 }
 ```
 
@@ -118,30 +119,31 @@ A hit promotes without changing deadline. A miss does not change recency; an exp
 
 ```go
 func (c *MetadataCache) Put(key, value string,
-    ttl int64) {
-    if ttl <= 0 {
-        if n, found := c.byKey[key]; found {
-            c.remove(n)
-        }
-        return
-    }
-    if c.capacity == 0 {
-        return
-    }
-    now := c.clock()
-    c.expire(now)
-    n, found := c.byKey[key]
-    if found {
-        unlinkMetadata(n)
-    } else {
-        n = &metadataNode{key: key}
-        c.byKey[key] = n
-    }
-    n.value, n.deadline = value, now+ttl
-    c.front(n)
-    if len(c.byKey) > c.capacity {
-        c.remove(c.tail.prev)
-    }
+	ttl int64) {
+	if ttl <= 0 {
+		if n, found := c.byKey[key]; found {
+			c.remove(n)
+		}
+		return
+	}
+	if c.capacity == 0 {
+		return
+	}
+	now := c.clock()
+	// Reclaim expired residents before evicting a live one.
+	c.expire(now)
+	n, found := c.byKey[key]
+	if found {
+		unlinkMetadata(n)
+	} else {
+		n = &metadataNode{key: key}
+		c.byKey[key] = n
+	}
+	n.value, n.deadline = value, now+ttl
+	c.front(n)
+	if len(c.byKey) > c.capacity {
+		c.remove(c.tail.prev)
+	}
 }
 ```
 
@@ -169,7 +171,7 @@ For concurrency, wrap each complete method in one exclusive lock. For backend lo
 
 **Brief.** Given a batch of events, return the top k titles by total recent watch minutes. Event ID deduplicates redelivery. Include event times in `(now-window, now]`; exclude future events. Rank descending total, then ascending title ID. Input order is arbitrary and preserved.
 
-Repeated IDs must have identical payloads. Durations are positive, all sums fit int64, and window>0. The public pipeline rejects invalid duration/window input. The event type omits user because this exercise ranks the supplied cohort; per-user ranking would require grouping or filtering by user too.
+Repeated IDs must have identical payloads. Durations are positive, sums and window-boundary arithmetic fit int64, and window>0. The public pipeline rejects invalid duration/window input. The event type omits user because this exercise ranks the supplied cohort; per-user ranking would require grouping or filtering by user too.
 
 ## Worked example: filter, deduplicate, then aggregate
 
@@ -192,25 +194,27 @@ Totals are `{A: 7, B: 7}`. A wins the ID tie, so the result is `[(A, 7), (B, 7)]
 
 ```go
 type WatchEvent struct {
-    ID, Title string
-    At, Minutes int64
+	ID, Title   string
+	At, Minutes int64
 }
 
 func RecentTotals(events []WatchEvent,
-    now, window int64) map[string]int64 {
-    seen := make(map[string]bool)
-    totals := make(map[string]int64)
-    for _, event := range events {
-        if event.At <= now-window || event.At > now {
-            continue
-        }
-        if seen[event.ID] {
-            continue
-        }
-        seen[event.ID] = true
-        totals[event.Title] += event.Minutes
-    }
-    return totals
+	now, window int64) map[string]int64 {
+	seen := make(map[string]bool)
+	totals := make(map[string]int64)
+	for _, event := range events {
+		// Exclude the left boundary and all future events.
+		if event.At <= now-window || event.At > now {
+			continue
+		}
+		if seen[event.ID] {
+			continue
+		}
+		// Deduplicate deliveries by event ID, not title ID.
+		seen[event.ID] = true
+		totals[event.Title] += event.Minutes
+	}
+	return totals
 }
 ```
 
@@ -220,25 +224,26 @@ This helper assumes validated positive durations and window. It does not mutate 
 
 ```go
 func RecentRanking(events []WatchEvent,
-    now, window int64, k int) ([]Candidate, bool) {
-    if window <= 0 {
-        return nil, false
-    }
-    for _, event := range events {
-        if event.Minutes <= 0 {
-            return nil, false
-        }
-    }
-    if k <= 0 {
-        return nil, true
-    }
-    totals := RecentTotals(events, now, window)
-    candidates := make([]Candidate, 0, len(totals))
-    for title, minutes := range totals {
-        candidates = append(candidates,
-            Candidate{ID: title, Score: minutes})
-    }
-    return TopTitles(candidates, k), true
+	now, window int64, k int) ([]Candidate, bool) {
+	if window <= 0 {
+		return nil, false
+	}
+	// Validate the whole batch even when k is nonpositive.
+	for _, event := range events {
+		if event.Minutes <= 0 {
+			return nil, false
+		}
+	}
+	if k <= 0 {
+		return nil, true
+	}
+	totals := RecentTotals(events, now, window)
+	candidates := make([]Candidate, 0, len(totals))
+	for title, minutes := range totals {
+		candidates = append(candidates,
+			Candidate{ID: title, Score: minutes})
+	}
+	return TopTitles(candidates, k), true
 }
 ```
 

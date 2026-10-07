@@ -18,26 +18,27 @@ A set works for lifetime-long suppression. For a 10-minute horizon, store each I
 
 ```go
 type Deduper struct {
-    mu sync.Mutex
-    expiry map[string]int64
-    Horizon int64
+	mu      sync.Mutex
+	expiry  map[string]int64
+	Horizon int64
 }
 
 func (d *Deduper) Accept(id string, now int64) bool {
-    d.mu.Lock()
-    defer d.mu.Unlock()
-    if d.Horizon <= 0 {
-        return true
-    }
-    if deadline, found := d.expiry[id]; found &&
-        now < deadline {
-        return false
-    }
-    if d.expiry == nil {
-        d.expiry = make(map[string]int64)
-    }
-    d.expiry[id] = now+d.Horizon
-    return true
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.Horizon <= 0 {
+		return true
+	}
+	if deadline, found := d.expiry[id]; found &&
+		now < deadline {
+		// A duplicate does not extend its suppression window.
+		return false
+	}
+	if d.expiry == nil {
+		d.expiry = make(map[string]int64)
+	}
+	d.expiry[id] = now + d.Horizon
+	return true
 }
 ```
 
@@ -59,40 +60,41 @@ With integer-second timestamps, repeated hits in one second share a bucket. A ru
 
 ```go
 type HitBucket struct {
-    At int64
-    Count int
+	At    int64
+	Count int
 }
 
 type HitCounter struct {
-    Window int64
-    buckets []HitBucket
-    total int
+	Window  int64
+	buckets []HitBucket
+	total   int
 }
 
 func (c *HitCounter) prune(now int64) {
-    expired := 0
-    for expired < len(c.buckets) &&
-        c.buckets[expired].At <= now-c.Window {
-        c.total -= c.buckets[expired].Count
-        expired++
-    }
-    c.buckets = c.buckets[expired:]
+	expired := 0
+	for expired < len(c.buckets) &&
+		c.buckets[expired].At <= now-c.Window {
+		// Reverse each expired bucket's contribution once.
+		c.total -= c.buckets[expired].Count
+		expired++
+	}
+	c.buckets = c.buckets[expired:]
 }
 
 func (c *HitCounter) Record(now int64) {
-    c.prune(now)
-    last := len(c.buckets)-1
-    if last >= 0 && c.buckets[last].At == now {
-        c.buckets[last].Count++
-    } else {
-        c.buckets = append(c.buckets, HitBucket{now, 1})
-    }
-    c.total++
+	c.prune(now)
+	last := len(c.buckets) - 1
+	if last >= 0 && c.buckets[last].At == now {
+		c.buckets[last].Count++
+	} else {
+		c.buckets = append(c.buckets, HitBucket{now, 1})
+	}
+	c.total++
 }
 
 func (c *HitCounter) Count(now int64) int {
-    c.prune(now)
-    return c.total
+	c.prune(now)
+	return c.total
 }
 ```
 
@@ -138,22 +140,23 @@ The skipped generation 2 is harmless; only uniqueness matters. Claiming removes 
 
 ```go
 type JobRecord struct {
-    ID string
-    Due int64
-    Generation uint64
+	ID         string
+	Due        int64
+	Generation uint64
 }
 
 func ClaimJob(current map[string]uint64,
-    record JobRecord, now int64) bool {
-    if record.Due > now {
-        return false
-    }
-    generation, found := current[record.ID]
-    if !found || generation != record.Generation {
-        return false
-    }
-    delete(current, record.ID)
-    return true
+	record JobRecord, now int64) bool {
+	if record.Due > now {
+		return false
+	}
+	generation, found := current[record.ID]
+	if !found || generation != record.Generation {
+		return false
+	}
+	// Remove authorization before handing work to a caller.
+	delete(current, record.ID)
+	return true
 }
 ```
 
@@ -167,19 +170,20 @@ Here is the complete due-draining step using the same expiry-record representati
 
 ```go
 func ReadyJobs(due *ExpiryHeap,
-    current map[string]uint64, now int64) []string {
-    var ready []string
-    for due.Len() > 0 && (*due)[0].Deadline <= now {
-        record := heap.Pop(due).(Expiry)
-        job := JobRecord{
-            ID: record.Key, Due: record.Deadline,
-            Generation: record.Generation,
-        }
-        if ClaimJob(current, job, now) {
-            ready = append(ready, job.ID)
-        }
-    }
-    return ready
+	current map[string]uint64, now int64) []string {
+	var ready []string
+	for due.Len() > 0 && (*due)[0].Deadline <= now {
+		record := heap.Pop(due).(Expiry)
+		job := JobRecord{
+			ID: record.Key, Due: record.Deadline,
+			Generation: record.Generation,
+		}
+		// Cancelled or replaced generations are discarded.
+		if ClaimJob(current, job, now) {
+			ready = append(ready, job.ID)
+		}
+	}
+	return ready
 }
 ```
 

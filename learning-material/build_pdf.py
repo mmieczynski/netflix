@@ -293,8 +293,10 @@ def markdown_flowables(text, chapter_number):
             code = []
             i += 1
             while i < len(lines) and not lines[i].startswith('```'):
-                # Keep readable line lengths on a six-inch book page.
-                code_line = normalize(lines[i]).expandtabs(4)
+                # Use compact indentation and preserve gofmt's field alignment.
+                code_line = normalize(lines[i])
+                indent = len(code_line) - len(code_line.lstrip('\t'))
+                code_line = ' ' * (4 * indent) + code_line[indent:].expandtabs(8)
                 assert pdfmetrics.stringWidth(code_line,MONO,9) <= WIDTH-14, code_line
                 code.append(code_line)
                 i += 1
@@ -425,4 +427,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

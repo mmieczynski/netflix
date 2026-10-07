@@ -1,6 +1,36 @@
-Validation updated 4 October 2026
+Validation updated 7 October 2026
 
-Reading edition revision
+Interview-code review, 7 October 2026
+- Reviewed all 65 Go blocks across the 12 PDF source chapters for correctness
+  under their stated contracts, idiomatic Go, explicit mutation order, ownership,
+  boundary behavior, and accurate complexity claims.
+- Applied gofmt to all examples and added 66 short comments explaining the
+  invariants and decisions that benefit from an explanation beside the code.
+- Added TimeStore.Get and NewSafeReadCache, pruned impossible playlist branches,
+  avoided shadowing the built-in copy function, and cleared removed transaction
+  slots so slice backing arrays do not retain discarded overlay maps.
+- Clarified the result-count objective for genre ranking with negative scores,
+  serialized clock ordering for concurrent limiters, and arithmetic assumptions.
+  Corresponding conversation explanations were updated without changing progress.
+- Added behavioral checks for time-store writes and queries, independent returned
+  slices, playlist selection against exhaustive subsets, concurrent cache access,
+  atomic per-user admission and deduplication, fixed-window boundaries, cancelled
+  and rescheduled jobs, ranking, nested transactions, filesystem resolution,
+  callback snapshots and reentrancy, and shared-load error/retry behavior.
+- Go 1.26.3 on Darwin arm64: go test -race -coverprofile=<temporary file>
+  -timeout 120s ./... passed; readingcode statement coverage was 95.1%.
+  go vet ./... and gofmt checks passed. The module still declares Go 1.20.
+- Rebuilt the PDF, text edition, generated Go package, and manifest with the
+  pinned ReportLab 5.0.1 and pypdf 6.19.0 dependencies.
+- The final PDF has 138 pages and approximately 19,028 source words. All 1,375
+  nonblank Go lines, including all comments, match extracted PDF text.
+- The renderer preserves gofmt's field alignment with compact indentation.
+  All pages were rendered for layout review; measured text stays within the
+  checked page margins. All 29 SVG diagrams parse successfully.
+- Study progress, unrelated local README edits, and the training project were
+  excluded from this book update.
+
+Previous reading edition revision, 4 October 2026
 - Rewrote all 12 canonical reading chapters around concrete problems, inputs,
   expected results, assumptions, state changes, and then the implementation.
 - Literal arrays, maps, intervals, timestamps, and return values replace verbal

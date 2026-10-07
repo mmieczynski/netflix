@@ -10,9 +10,9 @@ ROOT = Path(__file__).resolve().parent
 
 
 def sync():
-    parts = ['// Code generated from reading Markdown; DO NOT EDIT.',
-             'package readingcode',
-             'import ("container/heap"; "sort"; "sync")']
+    parts = ['// Code generated from reading Markdown; DO NOT EDIT.\n'
+             'package readingcode\n\n'
+             'import (\n\t"container/heap"\n\t"sort"\n\t"sync"\n)']
     blocks_total = 0
     for path in sorted((ROOT / 'reading').glob('[0-9]*.md')):
         text = path.read_text(encoding='utf-8')
