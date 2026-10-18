@@ -1,4 +1,27 @@
-Validation updated 7 October 2026
+Validation updated 13 October 2026
+
+Hiring-manager preparation, 13 October 2026
+- Added a sourced reading chapter for L5 Developer Platform, JR32657, based on
+  the supplied recruiter brief and role, Netflix culture and engineering
+  sources, a public L5 mock, and scoped candidate reports.
+- Added 18 question families, project follow-up prompts, answer criteria,
+  interpretation risks, manager questions, and story coverage guidance.
+- Added a separate 12-round conversation session and an unfilled story bank.
+  Indexed the session without treating authored material as completed practice.
+- Updated the PDF builder and Go extractor to distinguish technical chapters
+  from reference chapters through reading-index.json. The PDF still takes its
+  content from the reading edition, not the conversation edition.
+- Rebuilt the PDF, plain text and manifest with the existing pinned ReportLab
+  5.0.1 and pypdf 6.19.0 dependencies in an isolated temporary environment.
+- The PDF has 162 pages; the new chapter occupies pages 136-158. Confirmed all
+  18 question identifiers and key sections in extracted PDF text. Rendered and
+  visually reviewed the cover, contents and all pages of the new chapter.
+  Measured text bounds in the new chapter passed margin checks.
+- Verified reading/session index paths, local Markdown links, 18 question
+  families, 12 coaching rounds, and three reference tables.
+- SHA-256 checks confirmed study-progress.json and the generated Go examples
+  are byte-identical to their pre-task contents. The 65 Go blocks are unchanged.
+- git diff --check passed. Existing user edits and training files were preserved.
 
 Interview-code review, 7 October 2026
 - Reviewed all 65 Go blocks across the 12 PDF source chapters for correctness

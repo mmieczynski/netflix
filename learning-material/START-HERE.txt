@@ -4,13 +4,18 @@ Read output/pdf/netflix-go-interview-book.pdf or learning-material/book.txt.
 The reading chapters are in learning-material/reading/.
 Conversation lessons and coaching questions are in learning-material/sessions/.
 
+For the L5 Developer Platform manager interview, chapter 13 is the research
+reference in hiring-manager/reading/. Session 13 in hiring-manager/sessions/ supports spoken preparation, and
+hiring-manager/story-bank.md holds actual story notes.
+
 For conversation with ChatGPT connected to this GitHub repository, start at the
 root README.md. It directs the tutor to TUTOR.md, the chapter index, and the
 chapter itself. No copied prompts, HTML reader, editor, timer, or code execution
 is required. The reading edition uses examples, diagrams, and state tables.
 The conversation edition uses questions, feedback, and spoken program design.
 
-Progress can be saved to study-progress.json only if the agent actually has
+Technical progress lives in learning-material/study-progress.json; manager
+progress lives in hiring-manager/study-progress.json. Progress can be saved only if the agent actually has
 write access. Read-only connections keep the handoff in the conversation.
 
 The Go files are optional supporting references, not prerequisites.

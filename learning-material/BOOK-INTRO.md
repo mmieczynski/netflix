@@ -2,6 +2,11 @@
 
 This book prepares you to reason through a live Go coding interview with another senior engineer. The exercises are original study scenarios shaped by your preparation plan; they are not a verified list of Netflix questions.
 
+Chapter 13 prepares the subsequent hiring-manager conversation for the L5
+Developer Platform role. It contains researched question themes, answer
+ingredients, project-story guidance and questions for the manager. It can be
+read independently of the technical chapters.
+
 The reading edition explains each problem directly. It gives a concrete input and expected output before introducing the technique, then traces state changes and shows Go code beside the reasoning. The separate conversation sessions remain available for teaching aloud, feedback, and one-question-at-a-time practice.
 
 ## Read the problem before the implementation
@@ -39,6 +44,10 @@ Small examples keep the state visible. Diagrams show a specific relationship or 
 ## The route through the material
 
 Chapters 1-5 develop representation, hashing, windows, ordering, traversal, stacks, and choice reasoning. Chapters 6-9 apply them to caches, deadlines, concurrency, limits, and event services. Chapter 10 covers ranking and rolling statistics. Chapter 11 models practical programs. Chapter 12 combines the concepts into two complete interview-style cases.
+
+Chapter 13 shifts to project experience, engineering judgment, culture and
+working relationships. Its separate conversation session supports developing
+your own stories aloud without inventing facts or requiring an editor.
 
 Read unfamiliar topics in order. On a later pass, you can cover the next table row and predict it, but the worked answers remain fully available. A change in assumptions is often the most useful check: negative numbers break a positive-only window proof; varying TTLs break insertion-order cleanup; falling scores break winner-only storage.
 

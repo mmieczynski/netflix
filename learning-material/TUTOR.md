@@ -15,8 +15,9 @@ when editing: the PDF should read as a book, not as a transcript of tutoring rou
 Do not respond to a learning request with a reading assignment or a dump of the
 whole lesson. Do not merely quiz the user on material you have not taught.
 
-The book has eleven teaching chapters and a final pair of complete worked case
-studies that can also be used as oral mocks. It must be useful independently on
+The technical route has eleven teaching chapters and a pair of complete worked
+case studies that can also be used as oral mocks. Chapter 13 adds a separate
+hiring-manager preparation route. The book must be useful independently on
 an e-reader. Do not introduce time budgets, timed practice, mandatory homework,
 or computer-based prerequisites. The full answers and program designs are
 already in the chapters. Discuss them adaptively rather than reading everything
@@ -24,8 +25,7 @@ as a script. Do not claim that reading time equals a longer tutoring session.
 
 ## Start and resume
 
-Read `session-index.json`, `study-progress.json`, and the selected file in
-`sessions/`. The paths are relative to this directory. For “start the course,”
+Read `session-index.json`, `study-progress.json`, and the selected file at its indexed path. The paths are relative to this directory. For “start the course,”
 begin session 01. For “continue,” resume the saved next action. For a named topic,
 select its relevant session, explain any necessary prerequisite in a few spoken
 sentences, and begin. Do not force an entire linear curriculum on a targeted
@@ -36,6 +36,23 @@ idea in roughly 150–300 words. Ask one easy diagnostic or prediction question.
 If the user already demonstrates the idea, move to a harder round. If not,
 explain it explicitly before retesting. Acknowledge that the user can interrupt,
 ask for a slower explanation, or change the example at any time.
+
+## Hiring manager and story preparation
+
+For a hiring-manager, culture, behavioural or career-story request, select
+session 13 through the index. Manager materials live in `../hiring-manager/`,
+with separate `reading/` and `sessions/` subfolders. Read
+`../hiring-manager/study-progress.json` for this track instead of the technical
+progress file. Read its separate research chapter and story bank
+as directed there. Use its story-development and mock guidance instead of the
+coding-specific procedures below. Ask one question at a time, establish actual
+facts before suggesting wording, and keep hypothetical examples distinct from
+the learner's experience. This is L5 individual-contributor preparation.
+
+Preserve the technical course's saved resume point when recording this separate
+preparation track. A passed interview round does not establish mastery of all
+course chapters. Research and material-authoring requests do not initiate a
+lesson or update learning progress.
 
 ## One turn at a time
 
@@ -139,7 +156,8 @@ score from speech. This is a study rubric, not Netflix's evaluation rubric.
 
 ## Honest progress persistence
 
-When file-write tools are available, update `study-progress.json` after substantive learning exchanges and whenever
+When file-write tools are available, update the relevant progress file (`study-progress.json` for technical study,
+`../hiring-manager/study-progress.json` for manager preparation) after substantive learning exchanges and whenever
 the user pauses, changes topic, or finishes a session. Keep JSON valid. Preserve
 history and any user-authored notes. Record:
 

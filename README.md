@@ -1,14 +1,14 @@
 # Netflix L5 interview learning material
 
 A reading edition for learning away from a computer, and a separate conversation
-edition for ChatGPT using this repository. The focus is the first live
-technical interview in Go with another senior engineer.
+edition for ChatGPT using this repository. It covers the live technical
+interview in Go and the subsequent L5 Developer Platform manager conversation.
 
 Read the [PDF](output/pdf/netflix-go-interview-book.pdf), the
 [book introduction](learning-material/BOOK-INTRO.md), or the
 [reading chapters](learning-material/reading/). The revised book introduces the problem and expected output before explaining
 an approach. It uses literal arrays and maps, 43 state tables, 29 vector diagrams,
-and 65 Go code blocks across all 12 chapters. The code appears beside the
+and 65 Go code blocks across the 12 technical chapters. The code appears beside the
 concept it implements, with assumptions, a trace, an invariant, and boundary
 cases. Both final case studies include assembled implementations.
 The [conversation sessions](learning-material/sessions/) retain their questions
@@ -48,9 +48,35 @@ load it. The tutor must establish access by actually reading the chapter.
 10. Recommendations and streaming ranking
 11. Filesystems, transactions, pub/sub, and service composition
 12. Complete cache and viewing-statistics interview case studies
+13. Hiring manager interview preparation for Developer Platform
 
 [Sources and scope](learning-material/SOURCES.md) distinguish official technical
 documentation from original exercises. These are not confirmed Netflix questions.
+
+## Hiring manager preparation
+
+All manager-interview materials live in [hiring-manager/](hiring-manager/).
+The [research guide](hiring-manager/reading/13-hiring-manager.md) is tailored
+to the recruiter brief and [Developer Platform position](https://explore.jobs.netflix.net/careers/job/790301977513),
+with sources checked on 13 October 2026. It covers 18 question families, strong
+answer ingredients, likely follow-ups, interpretation risks, and questions to
+ask the manager. It is included as chapter 13 in the PDF and plain-text edition.
+
+The [story selector](hiring-manager/story-bank.md) maps interview questions to
+individual story cards. [Culture framing](hiring-manager/culture-framing.md) and
+[remaining gaps](hiring-manager/gaps.md) guide preparation. [Manager preparation progress](hiring-manager/study-progress.json)
+is stored separately from technical study. Ask to prepare a project story or practise the
+manager conversation; ChatGPT should retrieve
+[session 13](hiring-manager/sessions/13-hiring-manager.md) and develop it with
+you one question at a time. No stories or completed practice have been inferred
+from the authoring of these materials.
+
+## Training projects
+
+[Cache with a time limit](training/cache-with-time-limit/README.md) is an
+independent Go exercise with a CodeSignal-style filesystem layout: a problem
+statement, method contract, complete reference implementation, and deterministic tests.
+It supports both optional coding practice and discussing an implementation aloud.
 
 ## Files for maintaining the material
 
@@ -61,6 +87,7 @@ documentation from original exercises. These are not confirmed Netflix questions
 - `learning-material/sessions/*.md`: conversation lessons and question bank, read by the tutor.
 - `learning-material/TUTOR.md`: teaching and spoken-implementation guidance.
 - `learning-material/study-progress.json`: learner state, only updated from actual learning.
+- `hiring-manager/`: manager research, coaching session, story bank and preparation progress.
 - `learning-material/book.txt`: complete plain-text edition.
 - `output/pdf/netflix-go-interview-book.pdf`: portable reading edition.
 - `learning-material/build_pdf.py`: regenerates the PDF and text edition.
@@ -76,4 +103,3 @@ learning exercise. `plan.md` remains the original scope input.
 The reading and conversation editions are intentionally separate sources. When
 correcting a shared concept, inspect both editions; when changing presentation,
 tailor it to that edition. Do not regenerate the book by flattening the tutor's Q&A.
-

@@ -105,5 +105,14 @@
     "format": "two complete worked cases, also usable as oral mocks",
     "requires_computer": false,
     "editor_required": false
+  },
+  {
+    "session": "13",
+    "title": "Hiring manager conversation and story preparation",
+    "path": "../hiring-manager/sessions/13-hiring-manager.md",
+    "dialogue_rounds": 12,
+    "format": "adaptive project and behavioral story coaching with a separate research reference",
+    "requires_computer": false,
+    "editor_required": false
   }
 ]

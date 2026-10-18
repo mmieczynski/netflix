@@ -4,6 +4,7 @@ All fences contain declarations, not loose statement fragments. Standard-library
 imports are supplied here because examples are printed without package boilerplate.
 """
 from pathlib import Path
+import json
 import re
 
 ROOT = Path(__file__).resolve().parent
@@ -14,7 +15,13 @@ def sync():
              'package readingcode\n\n'
              'import (\n\t"container/heap"\n\t"sort"\n\t"sync"\n)']
     blocks_total = 0
-    for path in sorted((ROOT / 'reading').glob('[0-9]*.md')):
+    index = json.loads((ROOT / 'reading-index.json').read_text(encoding='utf-8'))
+    for entry in index:
+        kind = entry.get('kind', 'technical')
+        assert kind in ('technical', 'reference'), f'Unknown chapter kind: {kind}'
+        if kind == 'reference':
+            continue
+        path = ROOT / entry['path']
         text = path.read_text(encoding='utf-8')
         blocks = re.findall(r'```go\n(.*?)\n```', text, re.S)
         assert blocks, f'No Go examples in {path}'

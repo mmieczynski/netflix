@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Autocomplete · Map + Trie</title>
+<style>
+:root{--ink:#19252c;--muted:#68747d;--line:#e0e6e8;--paper:#f5f7f7;--blue:#275de6;--blue-soft:#edf2ff;--gold:#b87813;--gold-soft:#fff6df;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+button,input{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px solid #86aaff;outline-offset:3px}
+button:disabled{opacity:.45;cursor:default}
+code,.mono{font-family:var(--mono)}
+button{touch-action:manipulation}
+.shell{max-width:1340px;margin:auto;padding:32px 32px 28px}
+header{display:flex;justify-content:space-between;gap:24px;align-items:center;margin-bottom:26px}
+.eyebrow{font-size:10px;font-weight:750;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}
+h1{margin:5px 0 4px;font-size:31px;letter-spacing:-1.25px;font-weight:720;line-height:1.25}
+h1 span{color:var(--blue)}
+.subtitle{margin:0;color:var(--muted);font-size:14px}
+.problem{border:1px solid var(--line);padding:7px 11px;border-radius:7px;color:var(--muted);white-space:nowrap;font:11px var(--mono);background:white}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:24px;background:white;border:1px solid var(--line);border-radius:15px;padding:20px 24px;margin-bottom:18px;box-shadow:0 2px 5px #17252c03}
+label.field{display:block;font-size:11px;font-weight:700;margin-bottom:8px;color:#4b5b66}
+.input-line{display:flex;gap:8px}
+#sequence{width:100%;min-width:80px;border:1px solid #cdd6de;border-radius:8px;padding:9px 12px;font:16px var(--mono);letter-spacing:2px;color:var(--ink);background:#fbfcfd}
+.primary,.secondary{border-radius:8px;padding:10px 14px;white-space:nowrap;font-weight:650;font-size:12px;border:1px solid transparent}
+.primary{background:var(--blue);color:white}
+.primary:hover:not(:disabled){background:#1c4fcf}
+.secondary{background:white;border-color:#d7dfe5;color:#364654}
+.secondary:hover:not(:disabled){background:#f5f8fc}
+.hint{font-size:11px;color:var(--muted);margin:9px 0 0}
+.control-bottom{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:12px}
+.tape{display:flex;flex-wrap:wrap;gap:4px;max-height:77px;overflow:auto}
+.char{display:inline-grid;place-items:center;border-radius:5px;min-width:26px;height:29px;border:1px solid var(--line);font:12px var(--mono);background:#fbfcfd;color:#98a2a9}
+.char.done{background:#edf2f5;color:#415567;border-color:#dde5ed}
+.char.next{background:var(--blue);border-color:var(--blue);color:white;box-shadow:0 0 0 2px #dce7ff}
+.char.end{font-weight:800}
+#step-count{font:10px var(--mono);color:var(--muted);white-space:nowrap}
+.scenarios{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.scenario{font-size:11px;border:1px solid var(--line);border-radius:6px;background:#fafcfc;padding:5px 8px;color:#50616c}
+.scenario:hover{border-color:#a8bbe4;color:var(--blue)}
+.scenario-label{font-size:10px;color:var(--muted);align-self:center;margin-right:3px}
+.search-state{border-left:1px solid var(--line);padding-left:24px}
+.state-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.buffer{font:22px var(--mono);color:var(--ink);height:37px;letter-spacing:1px;display:flex;align-items:center;overflow:hidden}
+.buffer .caret{height:24px;width:2px;background:var(--blue);display:inline-block;margin-left:4px;flex-shrink:0}
+.buffer .placeholder{color:#9aa5ad;font-size:16px}
+.cursor-pill{font:10px var(--mono);padding:5px 8px;border-radius:6px;background:var(--blue-soft);color:var(--blue);max-width:50%;overflow-wrap:anywhere}
+.cursor-pill.miss{background:var(--gold-soft);color:#94660e}
+.suggestion-label{font-size:10px;color:var(--muted);margin:8px 0 6px}
+.suggestions{display:flex;gap:7px;min-height:40px;flex-wrap:wrap}
+.suggestion{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:white;padding:7px 9px;border-radius:8px;font-size:12px}
+.rank{font:10px var(--mono);color:#99a3aa}
+.suggestion-count{font:10px var(--mono);background:#f0f3f5;border-radius:4px;padding:2px 5px;color:#50616c}
+.empty{font-size:12px;color:#89949b;align-self:center}
+.workspace{display:grid;grid-template-columns:310px minmax(0,1fr);gap:18px;align-items:start}
+.panel{border:1px solid var(--line);border-radius:15px;background:white;overflow:hidden;box-shadow:0 2px 5px #17252c03}
+.panel-head{padding:17px 20px 13px;border-bottom:1px solid #edf0f2;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.panel-title{font-size:14px;font-weight:700;margin:0;letter-spacing:-.2px}
+.panel-sub{font:10px var(--mono);color:var(--muted);margin-top:3px}
+.counter{font:10px var(--mono);border-radius:5px;background:#f3f6f7;color:#63737d;padding:4px 7px;white-space:nowrap}
+.map-columns{display:grid;grid-template-columns:62px 18px 1fr;gap:5px;color:#8a969e;font-size:9px;text-transform:uppercase;letter-spacing:.8px;padding:14px 15px 7px}
+.map-list{padding:0 10px 10px;max-height:430px;overflow:auto}
+.map-row{display:grid;grid-template-columns:62px 18px minmax(0,1fr);gap:5px;align-items:center;width:100%;border:1px solid transparent;background:white;padding:7px 4px;text-align:left;border-radius:9px;color:var(--ink)}
+.map-row:hover,.map-row.chosen{background:#f7f9fc;border-color:#dfe6f2}
+.map-key{font:11px var(--mono);overflow-wrap:anywhere}
+.map-arrow{color:#a9b4bf;text-align:center;font-size:18px}
+.record{display:flex;align-items:center;gap:7px;border:1px solid var(--record-border);background:var(--record-bg);padding:9px 8px;border-radius:8px;min-width:0;transition:box-shadow .15s,transform .15s}
+.record-id{flex-shrink:0;display:inline-grid;place-items:center;width:23px;height:23px;border-radius:6px;background:var(--record-ink);color:white;font:700 11px var(--mono)}
+.record-text{min-width:0;flex:1;font:11px var(--mono);overflow-wrap:anywhere;color:var(--record-ink)}
+.record-count{font:700 14px var(--mono);color:var(--record-ink);min-width:17px;text-align:right}
+.record.updated{box-shadow:0 0 0 2px #eac374}
+.record.related{box-shadow:0 0 0 2px var(--record-ink)}
+.map-note{padding:12px 18px 15px;font-size:11px;color:var(--muted);border-top:1px solid #edf0f2;line-height:1.65}
+.map-note strong{color:#41515c;font-weight:650}
+.inspector{margin-top:18px}
+.inspector-body{padding:17px 19px}
+.inspector-caption{font-size:10px;color:var(--muted);margin:0 0 6px}
+.inspected-prefix{font:17px var(--mono);margin-bottom:15px;overflow-wrap:anywhere}
+.inspector-line{font:11px var(--mono);margin-bottom:13px;color:#667782}
+.children-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:16px}
+.child-link{font:10px var(--mono);background:#f7f9fa;color:#425461;border:1px solid var(--line);border-radius:5px;padding:5px 7px}
+.child-link:hover{background:var(--blue-soft);color:var(--blue)}
+.reference-list{display:flex;flex-direction:column;gap:8px}
+.reference{display:flex;align-items:center;gap:8px;font:11px var(--mono);color:#536673}
+.reference-name{flex:1;overflow-wrap:anywhere}
+.ref-arrow{color:#a8b2ba}
+.pointer-note{font-size:11px;color:var(--muted);margin:14px 0 0;line-height:1.65}
+.trie-heading{align-items:start}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:5px}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ccc}
+.legend .blue{background:var(--blue)}
+.legend .gold{background:#d5a246}
+.legend .end-dot{background:#758792;width:5px;height:5px}
+.trie-canvas{position:relative;overflow:auto;height:532px;background-color:#fcfdfd;background-image:radial-gradient(#dce4e8 .7px,transparent .7px);background-size:18px 18px}
+#trie{display:block;margin:0 auto;height:auto;overflow:visible}
+.edge{fill:none;stroke:#cdd6df;stroke-width:1.7}
+.edge.path{stroke:#7099f4;stroke-width:2.5}
+.edge.changed{stroke:#d6ab54;stroke-width:2.5}
+.edge-label circle{fill:#fcfdfd;stroke:#e4e9ec}
+.edge-label text{font:11px var(--mono);fill:#81909a}
+.node{cursor:pointer;outline:none}
+.node .node-bg{fill:white;stroke:#d5dfe6;stroke-width:1.2;filter:url(#shadow)}
+.node:hover .node-bg,.node:focus-visible .node-bg{stroke:#7697cf;stroke-width:2}
+.node.selected .node-bg{stroke:#7f93af;stroke-dasharray:4 3}
+.node.current .node-bg{fill:#edf3ff;stroke:var(--blue);stroke-width:2;stroke-dasharray:none}
+.node.changed .node-bg{fill:#fff9eb;stroke:#d6a345;stroke-width:1.8}
+.node.related .node-bg{stroke:var(--focus-color,#516aa2);stroke-width:2.3}
+.node .prefix{font:600 13px var(--mono);fill:#2a3a48;text-anchor:middle}
+.node .top-label{font:9px var(--mono);fill:#8c99a3}
+.node .pointer-label{font:700 9px var(--mono);text-anchor:middle}
+.node .empty-top{font:10px var(--mono);fill:#9aa5ae}
+.node .current-label{font:700 9px var(--sans);fill:var(--blue);text-anchor:middle;letter-spacing:.3px}
+.trie-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-top:1px solid #edf0f2;font-size:10px;color:var(--muted)}
+.trie-bottom code{color:#64747e;font-size:10px}
+.zoom-controls{display:flex;gap:4px;align-items:center}
+.zoom-controls button{border:1px solid var(--line);border-radius:5px;background:white;padding:4px 7px;font-size:10px;color:#657582}
+.zoom-controls button[aria-pressed="true"]{background:var(--blue-soft);border-color:#c8d8fd;color:var(--blue)}
+.event{margin-top:18px;border:1px solid #d9e3f7;border-radius:12px;background:#f1f5ff;padding:14px 17px;display:flex;gap:12px;align-items:start}
+.event.saved{background:#fffaed;border-color:#ead9b5}
+.event.missing{background:#fff9ef;border-color:#ecddc7}
+.event-symbol{font:13px var(--mono);background:white;color:var(--blue);border:1px solid #dee5f0;border-radius:6px;min-width:31px;height:31px;display:grid;place-items:center}
+.event.saved .event-symbol{color:var(--gold);border-color:#eee0c6}
+.event-title{font-size:12px;font-weight:650;margin:0 0 3px}
+.event-detail{font-size:11px;color:#63748b;line-height:1.6;margin:0}
+.trace{margin-top:18px}
+.trace summary{padding:13px 18px;cursor:pointer;font-size:11px;font-weight:600;color:#52636f;list-style-position:inside}
+.trace ol{padding:0 18px 14px 37px;margin:0;max-height:180px;overflow:auto;color:#657782;font:10px/1.9 var(--mono)}
+.trace li{padding-left:5px;overflow-wrap:anywhere}
+footer{display:flex;justify-content:space-between;gap:16px;margin-top:20px;color:#819099;font-size:10px}
+footer span:first-child{max-width:850px}
+.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);border:0}
+@media(max-width:1000px){.shell{padding:24px 20px}.workspace{grid-template-columns:270px minmax(0,1fr)}.controls{grid-template-columns:1.1fr 1fr;padding:18px}.input-line{flex-wrap:wrap}#sequence{flex-basis:100%}.search-state{padding-left:18px}.map-columns,.map-row{grid-template-columns:51px 13px minmax(0,1fr)}.legend{gap:7px}}
+@media(max-width:720px){.shell{padding:20px 14px}header{align-items:start;margin-bottom:20px}h1{font-size:26px}.problem{display:none}.subtitle{font-size:12px;max-width:330px}.controls{grid-template-columns:1fr;gap:17px;padding:17px}.input-line{flex-wrap:nowrap}#sequence{flex-basis:auto}.search-state{border-left:0;border-top:1px solid var(--line);padding:15px 0 0}.workspace{display:flex;flex-direction:column}.side{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px}.inspector{margin-top:0}.panel-head{padding:13px 14px}.panel-title{font-size:13px}.map-columns,.map-row{grid-template-columns:48px 12px minmax(0,1fr)}.map-columns{padding:10px 10px 5px}.map-list{padding:0 5px 7px}.record{padding:7px 5px;gap:4px}.record-text{display:none}.record-id{width:21px;height:21px}.map-key{font-size:10px}.map-note{padding:10px 12px;font-size:10px}.map-row{padding:5px 3px}.inspector-body{padding:12px}.inspector-caption{font-size:9px}.inspected-prefix{font-size:14px;margin-bottom:10px}.inspector-line{margin-bottom:8px;font-size:10px}.children-list{margin-bottom:10px}.pointer-note{font-size:10px;margin-top:9px}.reference-list{gap:6px}.reference{font-size:10px}.main{width:100%;min-width:0}.trie-canvas{height:475px}.trie-heading{flex-wrap:wrap}.trie-bottom{padding:10px 14px;flex-wrap:wrap}footer{flex-direction:column;gap:4px}.event{padding:12px}.suggestions{min-height:34px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:720px){.side .panel-head{flex-wrap:wrap;gap:5px}.input-line{display:grid;grid-template-columns:1fr auto auto}#sequence{grid-column:1 / -1}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header>
+  <div>
+    <div class="eyebrow">Data structures, made visible</div>
+    <h1>Autocomplete <span>/</span> Map + Trie</h1>
+    <p class="subtitle">Follow a character. Find a prefix. See which three sentences win.</p>
+  </div>
+  <div class="problem">LEETCODE 642</div>
+</header>
+
+<section class="controls" aria-label="Autocomplete controls">
+  <div>
+    <label class="field" for="sequence">INPUT SEQUENCE</label>
+    <div class="input-line">
+      <input id="sequence" type="text" value="cap#" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="sequence-hint">
+      <button id="step" class="primary" type="button">Send p →</button>
+      <button id="run" class="secondary" type="button">Run rest</button>
+      <button id="reset" class="secondary" type="button" title="Restore the original four sentences">Reset</button>
+    </div>
+    <p class="hint" id="sequence-hint">Each step calls <code>Input(c)</code>. <code>#</code> saves the sentence and starts a new search.</p>
+    <div class="control-bottom">
+      <div id="tape" class="tape" aria-hidden="true"></div>
+      <div id="step-count"></div>
+    </div>
+    <div class="scenarios" aria-label="Load an example with the original counts">
+      <span class="scenario-label">FRESH EXAMPLES</span>
+      <button class="scenario" type="button" data-scenario="ca">Read ca</button>
+      <button class="scenario" type="button" data-scenario="cap#">Promote cap</button>
+      <button class="scenario" type="button" data-scenario="cab#ca">Learn cab</button>
+    </div>
+  </div>
+  <div class="search-state">
+    <div class="state-top">
+      <div>
+        <label class="field" style="margin-bottom:0">CURRENT BUFFER</label>
+        <div class="buffer" id="buffer"></div>
+      </div>
+      <div class="cursor-pill" id="cursor"></div>
+    </div>
+    <div class="suggestion-label">RETURNED SUGGESTIONS · FREQUENCY ↓, ASCII ↑</div>
+    <div class="suggestions" id="suggestions" aria-live="polite"></div>
+    <p class="hint">The blue trie node is <code>current</code>. It moves one edge per character.</p>
+  </div>
+</section>
+
+<div class="workspace">
+  <aside class="side" aria-label="Map and selected node">
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2 class="panel-title">The sentence map</h2><div class="panel-sub">map[string]*sentence</div></div>
+        <span class="counter" id="record-total">4 records</span>
+      </div>
+      <div class="map-columns"><span>Key</span><span></span><span>Shared record · count</span></div>
+      <div class="map-list" id="map-list"></div>
+      <div class="map-note"><strong>A–D name objects, not copies.</strong> Click a record to highlight the trie nodes whose <code>top</code> slice references it.</div>
+    </section>
+    <section class="panel inspector">
+      <div class="panel-head"><div><h2 class="panel-title">Inside a trie node</h2><div class="panel-sub">Click any node to inspect it</div></div></div>
+      <div class="inspector-body" id="inspector"></div>
+    </section>
+  </aside>
+
+  <div class="main">
+    <section class="panel">
+      <div class="panel-head trie-heading">
+        <div><h2 class="panel-title">The prefix trie</h2><div class="panel-sub">Edges are characters. Nodes represent prefixes.</div></div>
+        <div class="legend"><span><i class="blue"></i>current</span><span><i class="gold"></i>updated by #</span><span><i class="end-dot"></i>complete sentence</span></div>
+      </div>
+      <div class="trie-canvas" id="trie-canvas">
+        <svg id="trie" role="group" aria-label="Interactive trie. Select a prefix node to inspect its children and top three references."></svg>
+      </div>
+      <div class="trie-bottom"><span>Each <code>top</code> keeps at most 3 shared references.</span><div class="zoom-controls" aria-label="Diagram zoom"><button id="zoom-fit" type="button" aria-pressed="true">Fit width</button><button id="zoom-full" type="button" aria-pressed="false">100%</button></div></div>
+    </section>
+    <section class="event" id="event" aria-live="polite"></section>
+    <details class="panel trace">
+      <summary>Operation trace <span id="trace-count"></span></summary>
+      <ol id="trace"></ol>
+    </details>
+  </div>
+</div>
+
+<footer>
+  <span>Prefix labels and the sentence dot are visual annotations. The Go trie node contains <code>children</code> and <code>top</code>; the root’s <code>top</code> is unused.</span>
+  <span>Self-contained · No network requests</span>
+</footer>
+</main>
+
+<script>
+"use strict";
+
+const INITIAL = [["car", 5], ["cat", 3], ["cap", 2], ["can", 2]];
+const PALETTE = [
+  {ink:"#6551a1", bg:"#f2eefa", border:"#e0d8f0"},
+  {ink:"#227c78", bg:"#eaf6f3", border:"#cfe6e0"},
+  {ink:"#b56539", bg:"#fff1e8", border:"#f3dccc"},
+  {ink:"#3b74b0", bg:"#ebf3fd", border:"#d5e3f5"},
+  {ink:"#a2477a", bg:"#faedf5", border:"#efd3e4"},
+  {ink:"#7e7a31", bg:"#f5f5e7", border:"#e5e5c6"}
+];
+const $ = id => document.getElementById(id);
+const escapeHTML = value => String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+const displayChar = c => c === " " ? "␠" : c;
+const prefixLabel = text => text === "" ? "root" : '"' + text.replace(/ /g, "␠") + '"';
+const shortPrefix = text => {
+  const label = prefixLabel(text);
+  return label.length > 13 ? '"' + text.slice(0, 9).replace(/ /g,"␠") + '…"' : label;
+};
+const colorStyle = record => "--record-ink:" + record.color.ink + ";--record-bg:" + record.color.bg + ";--record-border:" + record.color.border;
+
+class AutocompleteModel {
+  constructor() {
+    this.nextNodeID = 0;
+    this.root = this.makeNode("");
+    this.current = this.root;
+    this.buffer = "";
+    this.sentences = new Map();
+    for (const [text, count] of INITIAL) this.add(text, count);
+  }
+
+  makeNode(prefix) {
+    return {id:this.nextNodeID++, prefix, children:new Map(), top:[]};
+  }
+
+  add(text, increment) {
+    let record = this.sentences.get(text);
+    if (!record) {
+      const index = this.sentences.size;
+      record = {id:index < 26 ? String.fromCharCode(65 + index) : "S" + (index + 1),
+        text, count:0, color:PALETTE[index % PALETTE.length]};
+      this.sentences.set(text, record);
+    }
+    record.count += increment;
+    let node = this.root;
+    const changed = [];
+    for (const c of text) {
+      if (!node.children.has(c)) node.children.set(c, this.makeNode(node.prefix + c));
+      node = node.children.get(c);
+      if (!node.top.includes(record)) node.top.push(record);
+      node.top.sort((a,b) => b.count - a.count || (a.text < b.text ? -1 : a.text > b.text ? 1 : 0));
+      node.top = node.top.slice(0,3);
+      changed.push(node.prefix);
+    }
+    return {record, changed};
+  }
+
+  clearBuffer() {
+    this.buffer = "";
+    this.current = this.root;
+  }
+
+  find(prefix) {
+    let node = this.root;
+    for (const c of prefix) {
+      node = node.children.get(c);
+      if (!node) return null;
+    }
+    return node;
+  }
+
+  input(c) {
+    if (c === "#") {
+      const text = this.buffer;
+      if (!text) return {kind:"empty", c, output:[], changed:[]};
+      const previous = this.sentences.get(text)?.count || 0;
+      const update = this.add(text, 1);
+      this.clearBuffer();
+      return {kind:"save", c, text, previous, ...update, output:[]};
+    }
+    if (!/^[a-z ]$/.test(c)) throw new Error("Expected lowercase ASCII, space, or #.");
+    this.buffer += c;
+    this.current = this.current?.children.get(c) || null;
+    return {kind:this.current ? "type" : "miss", c, prefix:this.buffer,
+      output:this.current ? this.current.top.map(record => record.text) : [], changed:[]};
+  }
+}
+
+let model = new AutocompleteModel();
+let sequence = "cap#";
+let position = 0;
+let selectedPrefix = "";
+let selectedRecordID = null;
+let zoomMode = "fit";
+let history = [];
+let lastEvent = {kind:"ready", changed:[], output:[]};
+
+function recordBadge(record) {
+  return '<span class="record-id" style="' + colorStyle(record) + '">' + escapeHTML(record.id) + '</span>';
+}
+
+function advance() {
+  if (position >= sequence.length) return;
+  const event = model.input(sequence[position++]);
+  lastEvent = event;
+  if (event.kind === "save") selectedPrefix = event.text;
+  else if (model.current) selectedPrefix = model.current.prefix;
+  const call = "Input(" + JSON.stringify(event.c) + ")";
+  if (event.kind === "save") {
+    history.push(call + " → []; " + JSON.stringify(event.text) + ": " + event.previous + " → " + event.record.count + "; current = root");
+  } else {
+    history.push(call + " → " + JSON.stringify(event.output) + (event.kind === "miss" ? "; current = nil" : ""));
+  }
+  if (history.length > 100) history.shift();
+}
+
+function resetData(nextSequence, prefill) {
+  model = new AutocompleteModel();
+  sequence = nextSequence;
+  position = 0;
+  history = [];
+  selectedPrefix = "";
+  selectedRecordID = null;
+  lastEvent = {kind:"ready", changed:[], output:[]};
+  $("sequence").value = sequence;
+  for (let i = 0; i < (prefill || 0); i++) advance();
+  render();
+}
+
+function loadSequence(value) {
+  const sanitized = value.replace(/[^a-z #]/g, "");
+  sequence = sanitized;
+  $("sequence").value = sanitized;
+  position = 0;
+  model.clearBuffer();
+  selectedPrefix = "";
+  lastEvent = {kind:"loaded", changed:[], output:[], filtered:sanitized !== value};
+  render();
+}
+
+function renderControls() {
+  $("tape").innerHTML = Array.from(sequence, (c,i) => '<span class="char ' +
+    (i < position ? "done" : i === position ? "next" : "") + (c === "#" ? " end" : "") + '">' +
+    escapeHTML(displayChar(c)) + '</span>').join("");
+  $("step-count").textContent = position + " / " + sequence.length + " sent";
+  $("step").textContent = position < sequence.length ? "Send " + displayChar(sequence[position]) + " →" : "Finished";
+  $("step").disabled = $("run").disabled = position >= sequence.length;
+  $("buffer").innerHTML = model.buffer ? '<span class="mono">' + escapeHTML(model.buffer.replace(/ /g,"␠")) + '</span><span class="caret"></span>' :
+    '<span class="placeholder">empty</span><span class="caret"></span>';
+  $("cursor").textContent = "current → " + (model.current ? prefixLabel(model.current.prefix) : "nil");
+  $("cursor").className = "cursor-pill" + (!model.current ? " miss" : "");
+  const records = model.current ? model.current.top : [];
+  $("suggestions").innerHTML = records.length ? records.map((r,i) =>
+    '<div class="suggestion"><span class="rank">' + (i+1) + '</span>' + recordBadge(r) +
+    '<span class="mono">' + escapeHTML(r.text) + '</span><span class="suggestion-count">' + r.count + '</span></div>').join("") :
+    '<span class="empty">' + (model.buffer ? "[] · no matching sentences" : "[] · waiting for the first character") + '</span>';
+}
+
+function renderMap() {
+  $("record-total").textContent = model.sentences.size + " records";
+  $("map-list").innerHTML = Array.from(model.sentences.values(), r => {
+    const isSelected = r.id === selectedRecordID;
+    const isUpdated = lastEvent.kind === "save" && lastEvent.record === r;
+    return '<button type="button" class="map-row' + (isSelected ? " chosen" : "") + '" data-record="' + r.id +
+      '" aria-pressed="' + isSelected + '" aria-label="Record ' + r.id + ': ' + escapeHTML(r.text) + ', count ' + r.count + '. Highlight references.">' +
+      '<span class="map-key">' + escapeHTML(JSON.stringify(r.text)) + '</span><span class="map-arrow" aria-hidden="true">→</span>' +
+      '<span class="record' + (isUpdated ? " updated" : "") + (isSelected ? " related" : "") + '" style="' + colorStyle(r) + '">' +
+      recordBadge(r) + '<span class="record-text">' + escapeHTML(r.text) + '</span><span class="record-count">' + r.count + '</span></span></button>';
+  }).join("");
+}
+
+function renderInspector() {
+  const node = model.find(selectedPrefix) || model.root;
+  const children = Array.from(node.children.entries()).sort(([a],[b]) => a < b ? -1 : 1);
+  const refs = node.top.map((r,i) =>
+    '<div class="reference"><span>[' + i + ']</span><span class="ref-arrow">→</span>' + recordBadge(r) +
+    '<span class="reference-name">' + escapeHTML(r.text) + '</span><strong>' + r.count + '</strong></div>').join("");
+  $("inspector").innerHTML =
+    '<p class="inspector-caption">PREFIX REACHED BY THE PATH</p><div class="inspected-prefix">' + escapeHTML(prefixLabel(node.prefix)) + '</div>' +
+    '<div class="inspector-line">children: map[byte]*trieNode</div><div class="children-list">' +
+    (children.length ? children.map(([c,child]) =>
+      '<button type="button" class="child-link" data-prefix="' + escapeHTML(child.prefix) + '">' +
+      escapeHTML(displayChar(c)) + ' → ' + escapeHTML(prefixLabel(child.prefix)) + '</button>').join("") : '<span class="empty">{} · no children</span>') + '</div>' +
+    '<div class="inspector-line">top: []*sentence</div><div class="reference-list">' +
+    (refs || '<span class="empty">[] · root cache is unused</span>') + '</div>' +
+    '<p class="pointer-note">' + (node.top.length ? 'These are the <strong>same objects</strong> as the map records. Only their order is cached here.' :
+      'The root starts each search. Suggestions are cached after consuming at least one character.') + '</p>';
+}
+
+function layoutTrie() {
+  const nodes = [], edges = [];
+  let leaf = 0, maxDepth = 0;
+  function visit(node, depth) {
+    const item = {node, depth, slot:0};
+    nodes.push(item);
+    maxDepth = Math.max(depth,maxDepth);
+    const children = Array.from(node.children.entries()).sort(([a],[b]) => a < b ? -1 : 1);
+    if (!children.length) item.slot = leaf++;
+    else {
+      const locations = children.map(([char,child]) => {
+        const childItem = visit(child, depth+1);
+        edges.push({from:item,to:childItem,char});
+        return childItem.slot;
+      });
+      item.slot = (locations[0] + locations[locations.length-1]) / 2;
+    }
+    return item;
+  }
+  visit(model.root,0);
+  const width = Math.max(700, leaf*150+40);
+  const offset = (width - (leaf-1)*150) / 2;
+  nodes.forEach(item => { item.x = offset + item.slot*150; item.y = 63 + item.depth*127; });
+  return {nodes, edges, width, height:Math.max(525, maxDepth*127 + 126)};
+}
+
+function renderTrie() {
+  const layout = layoutTrie();
+  const changed = new Set(lastEvent.changed);
+  const focusRecord = Array.from(model.sentences.values()).find(r => r.id === selectedRecordID);
+  const svg = $("trie");
+  const canvas = $("trie-canvas");
+  const scale = zoomMode === "fit" ? Math.min(1, canvas.clientWidth / layout.width) : 1;
+  svg.setAttribute("viewBox","0 0 " + layout.width + " " + layout.height);
+  svg.style.minWidth = "0";
+  svg.style.width = layout.width * scale + "px";
+  svg.style.height = layout.height * scale + "px";
+  canvas.style.height = Math.min(532, Math.max(300, layout.height * scale + 6)) + "px";
+  $("zoom-fit").setAttribute("aria-pressed", String(zoomMode === "fit"));
+  $("zoom-full").setAttribute("aria-pressed", String(zoomMode === "full"));
+  let markup = '<defs><filter id="shadow" x="-15%" y="-20%" width="130%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#24394b" flood-opacity=".04"/></filter></defs>';
+  for (const edge of layout.edges) {
+    const a = edge.from, b = edge.to, middle = (a.y+b.y)/2;
+    const active = model.buffer.startsWith(b.node.prefix);
+    markup += '<path class="edge' + (changed.has(b.node.prefix) ? " changed" : active ? " path" : "") +
+      '" d="M ' + a.x + ' ' + (a.y+37) + ' C ' + a.x + ' ' + middle + ' ' + b.x + ' ' + middle + ' ' + b.x + ' ' + (b.y-37) + '"/>';
+    const labelX = (a.x+b.x)/2;
+    markup += '<g class="edge-label" transform="translate(' + labelX + ',' + middle + ')"><circle r="10"/><text text-anchor="middle" y="4">' + escapeHTML(displayChar(edge.char)) + '</text></g>';
+  }
+  for (const item of layout.nodes) {
+    const n = item.node, current = n === model.current, related = focusRecord && n.top.includes(focusRecord);
+    const classes = "node" + (current ? " current" : changed.has(n.prefix) ? " changed" : "") +
+      (n.prefix === selectedPrefix ? " selected" : "") + (related ? " related" : "");
+    const topLabel = n.top.map(r=>r.text).join(", ") || "empty";
+    markup += '<g class="' + classes + '" transform="translate(' + item.x + ',' + item.y +
+      ')" data-prefix="' + escapeHTML(n.prefix) + '" role="button" tabindex="0" aria-label="' +
+      escapeHTML(prefixLabel(n.prefix) + "; top: " + topLabel + (current ? "; current node" : "")) +
+      '" style="--focus-color:' + (focusRecord ? focusRecord.color.ink : "#526da5") + '">' +
+      '<title>' + escapeHTML(prefixLabel(n.prefix) + " → [" + n.top.map(r=>r.id + ": " + r.text + " (" + r.count + ")").join(", ") + "]") + '</title>' +
+      '<rect class="node-bg" x="-59" y="-37" width="118" height="74" rx="11"/>' +
+      '<text class="prefix" y="-12">' + escapeHTML(shortPrefix(n.prefix)) + '</text>' +
+      '<text class="top-label" x="-48" y="18">top:</text>';
+    if (model.sentences.has(n.prefix)) markup += '<circle cx="47" cy="-26" r="3" fill="#758792"/>';
+    if (!n.top.length) markup += '<text class="empty-top" x="-18" y="18">[]</text>';
+    n.top.forEach((r,i) => {
+      const x = -20 + i*25;
+      markup += '<g class="ref" transform="translate(' + x + ',5)"><rect width="21" height="20" rx="5" fill="' + r.color.bg +
+        '" stroke="' + r.color.border + '"/><text class="pointer-label" x="10.5" y="13.5" fill="' + r.color.ink + '">' + r.id + '</text></g>';
+    });
+    if (current) markup += '<text class="current-label" y="-45">current</text>';
+    markup += '</g>';
+  }
+  svg.innerHTML = markup;
+  const anchor = layout.nodes.find(item => item.node.prefix === selectedPrefix) || layout.nodes[0];
+  canvas.scrollLeft = Math.max(0, anchor.x * scale - canvas.clientWidth / 2);
+  canvas.scrollTop = Math.max(0, anchor.y * scale - canvas.clientHeight / 2);
+}
+
+function renderEvent() {
+  const e = lastEvent;
+  let title = "", detail = "", symbol = "→", cls = "";
+  if (e.kind === "type") {
+    title = 'Input(' + JSON.stringify(e.c) + ') follows one child edge.';
+    detail = 'The buffer is ' + JSON.stringify(model.buffer) + '. Return the cached top three from this prefix; no sentence counts change.';
+    symbol = displayChar(e.c);
+  } else if (e.kind === "miss") {
+    title = 'No node exists for ' + JSON.stringify(model.buffer) + '.';
+    detail = 'current = nil and the result is []. The buffer still collects characters. A later # will add this complete sentence.';
+    symbol = "∅"; cls = " missing";
+  } else if (e.kind === "save") {
+    title = JSON.stringify(e.text) + ': count ' + e.previous + ' → ' + e.record.count + '.';
+    detail = (e.previous ? "Reconsider this sentence" : "Create the record and missing nodes") +
+      ' along its prefix path. Gold marks the updated nodes. Input("#") returns [] and resets current to root.';
+    symbol = "#"; cls = " saved";
+  } else if (e.kind === "empty") {
+    title = "The buffer is empty.";
+    detail = "There is no sentence to save. Start with a letter; counts are unchanged.";
+    symbol = "#";
+  } else if (e.kind === "loaded") {
+    title = "New input sequence loaded.";
+    detail = (e.filtered ? "Only lowercase a–z, spaces, and # are allowed. " : "") +
+      "The unsubmitted buffer was cleared; existing sentence counts are unchanged. Send the next character to begin.";
+  } else {
+    title = "The four sentences are loaded.";
+    detail = "Send c, then a. Both prefix nodes cache [A, B, D]: car, cat, can. cap still exists, even though it is outside these top three.";
+  }
+  $("event").className = "event" + cls;
+  $("event").innerHTML = '<div class="event-symbol" aria-hidden="true">' + escapeHTML(symbol) +
+    '</div><div><p class="event-title">' + escapeHTML(title) + '</p><p class="event-detail">' + escapeHTML(detail) + '</p></div>';
+  $("trace-count").textContent = "(" + history.length + ")";
+  $("trace").innerHTML = history.map(entry => "<li>" + escapeHTML(entry) + "</li>").join("");
+}
+
+function render() {
+  renderControls();
+  renderMap();
+  renderInspector();
+  renderTrie();
+  renderEvent();
+}
+
+$("step").addEventListener("click", () => { advance(); render(); });
+$("run").addEventListener("click", () => {
+  while (position < sequence.length) advance();
+  render();
+});
+$("reset").addEventListener("click", () => resetData("cap#",0));
+$("sequence").addEventListener("input", e => loadSequence(e.target.value));
+$("sequence").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); advance(); render(); }
+});
+document.querySelectorAll("[data-scenario]").forEach(button => {
+  button.addEventListener("click", () => resetData(button.dataset.scenario,0));
+});
+$("map-list").addEventListener("click", e => {
+  const button = e.target.closest("[data-record]");
+  if (!button) return;
+  selectedRecordID = selectedRecordID === button.dataset.record ? null : button.dataset.record;
+  renderMap();
+  renderTrie();
+  $("map-list").querySelector('[data-record="' + button.dataset.record + '"]')?.focus();
+});
+function inspectFromEvent(e) {
+  const node = e.target.closest("[data-prefix]");
+  if (!node) return;
+  selectedPrefix = node.dataset.prefix;
+  renderInspector();
+  renderTrie();
+}
+$("trie").addEventListener("click", inspectFromEvent);
+$("trie").addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    inspectFromEvent(e);
+    const node = Array.from($("trie").querySelectorAll("[data-prefix]")).find(n=>n.dataset.prefix === selectedPrefix);
+    node?.focus();
+  }
+});
+$("inspector").addEventListener("click", inspectFromEvent);
+$("zoom-fit").addEventListener("click", () => { zoomMode = "fit"; renderTrie(); });
+$("zoom-full").addEventListener("click", () => { zoomMode = "full"; renderTrie(); });
+window.addEventListener("resize", renderTrie);
+
+// Start at the same "ca" prefix as the conversation diagram.
+resetData("cap#",2);
+</script>
+</body>
+</html>

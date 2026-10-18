@@ -264,7 +264,7 @@ def page_decor(canvas, doc):
     canvas.saveState()
     canvas.setFont('Book', 7.4)
     canvas.setFillColor(colors.HexColor('#555555'))
-    canvas.drawString(MARGIN, PAGE[1] - 24, 'NETFLIX L5  |  GO INTERVIEW PREPARATION')
+    canvas.drawString(MARGIN, PAGE[1] - 24, 'NETFLIX L5  |  INTERVIEW PREPARATION')
     canvas.setStrokeColor(colors.HexColor('#bbbbbb'))
     canvas.setLineWidth(0.35)
     canvas.line(MARGIN, PAGE[1] - 30, PAGE[0] - MARGIN, PAGE[1] - 30)
@@ -369,8 +369,16 @@ def main():
     for path, text in zip(files, chapters):
         for phrase in forbidden:
             assert phrase not in text, f'Obsolete instruction {phrase!r} in {path}'
-    assert len(index) == 12
-    for path, text in zip(files[1:13], chapters[1:13]):
+    assert [item['chapter'] for item in index] == list(range(1, len(index) + 1))
+    technical_chapters = []
+    reference_chapters = []
+    for item, path, text in zip(index, files[1:-1], chapters[1:-1]):
+        kind = item.get('kind', 'technical')
+        assert kind in ('technical', 'reference'), f'Unknown chapter kind: {kind}'
+        if kind == 'reference':
+            reference_chapters.append(text)
+            continue
+        technical_chapters.append(text)
         assert text.count('## Worked example:') >= 2, path
         assert '## Putting the program together:' in text, path
         assert '## Go example:' in text, path
@@ -378,14 +386,14 @@ def main():
         assert '![' in text, path
     args.output.parent.mkdir(parents=True, exist_ok=True)
     doc = BookDoc(str(args.output), pagesize=PAGE, rightMargin=MARGIN, leftMargin=MARGIN,
-                  topMargin=43, bottomMargin=37, title='Learning to Solve Coding Problems',
-                  author='Netflix L5 Go Interview Preparation',
+                  topMargin=43, bottomMargin=37, title='Netflix L5 Interview Preparation',
+                  author='Netflix L5 Interview Preparation',
                   subject='Self-contained interview learning away from a computer')
-    story = [Spacer(1,80), Paragraph('Learning to solve<br/>coding problems', styles['cover']),
-             Paragraph('Netflix L5 interview preparation in Go', styles['subtitle']),
+    story = [Spacer(1,80), Paragraph('Netflix L5<br/>interview preparation', styles['cover']),
+             Paragraph('Go engineering and hiring-manager conversations', styles['subtitle']),
              Paragraph('The reading edition<br/>Worked examples and visual explanations', styles['body']),
-             Spacer(1,28), Paragraph('Data structures. Algorithms. Caches. Rate limiting.<br/>Recommendations. Worked program designs.', styles['body']),
-             Spacer(1,28), Paragraph('Learn how state changes, why an approach works, and when a different structure is needed. No computer required.', styles['body']),
+             Spacer(1,28), Paragraph('Data structures. Algorithms. Practical Go programs.<br/>Project experience. Culture. Engineering judgment.', styles['body']),
+             Spacer(1,28), Paragraph('Develop technical reasoning and prepare evidence from your experience. No computer required.', styles['body']),
              PageBreak(), Paragraph('Contents', styles['h1'])]
     toc = TableOfContents()
     toc.levelStyles = [styles['toc']]
@@ -410,14 +418,19 @@ def main():
     for key, spec in FIGURES.items():
         assert spec['title'] in extracted, f'Figure not rendered: {key}'
     assert len(reader.pages) > 30
-    for n in range(1,13):
-        assert f'Chapter {n}' in extracted, f'Missing chapter {n}'
+    for item in index:
+        assert f"Chapter {item['chapter']}" in extracted, f"Missing chapter {item['chapter']}"
     words = len(re.findall(r'\b[\w]+(?:[\x27-][\w]+)*\b',whole))
-    report = {'edition':'reading','chapters':12,'worked_examples':whole.count('## Worked example:'),
+    technical_whole = '\n\n'.join([chapters[0], *technical_chapters, chapters[-1]])
+    report = {'edition':'reading','chapters':len(index),
+              'technical_chapters':len(technical_chapters),'reference_chapters':len(reference_chapters),
+              'worked_examples':whole.count('## Worked example:'),
               'vector_figures':len(FIGURES),'go_example_sections':whole.count('## Go example:'),
-              'go_code_blocks':code_blocks,'state_tables':sum(1 for line in whole.splitlines() if line.startswith('| ---')),
+              'go_code_blocks':code_blocks,'state_tables':sum(1 for line in technical_whole.splitlines() if line.startswith('| ---')),
+              'reference_tables':sum(1 for text in reference_chapters for line in text.splitlines()
+                                     if line.startswith('| ---')),
               'problem_briefs':whole.count('**Problem.**')+whole.count('**Brief.**'),
-              'conversation_questions_in_separate_sessions':132,
+              'conversation_questions_in_separate_sessions':144,
               'worked_program_designs':12,'complete_case_studies':2,
               'source_words_approx':words,'pdf_pages':len(reader.pages),'pdf_bytes':args.output.stat().st_size,
               'source_files':[str(p.relative_to(REPO)).replace('\\','/') for p in files]}

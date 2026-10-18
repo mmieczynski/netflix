@@ -1,5 +1,12 @@
 # Sources and scope
 
+Hiring-manager preparation was added on 13 October 2026. Chapter 13 has its own
+[research and source notes](../hiring-manager/reading/13-hiring-manager.md), based on the supplied
+Developer Platform role, recruiter guidance, official Netflix material, a public
+mock and candidate reports. Its questions and assessment guidance are original
+preparation material. The technical-course scope below remains the history of
+chapters 1-12.
+
 Original scope research checked on 30 September 2026. Reading edition revised on 4 October 2026; Go specification, heap, sync, and memory-model references rechecked for the revised examples. The exercises and learning sequence are original preparation material; they are not a leaked or verified Netflix question bank.
 
 ## What informed the preparation
@@ -59,4 +66,3 @@ describes conversational turn-taking and task permissions.
 [Official workspace connection guidance](https://learn.chatgpt.com/docs/enterprise/shared-connections)
 distinguishes resource access from write actions and recommends checking them
 separately. These pages do not verify this reader's account configuration.
-

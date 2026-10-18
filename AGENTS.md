@@ -3,7 +3,9 @@
 This repository contains the user's Netflix L5 Go interview preparation book.
 Reading chapters live in `learning-material/reading/`; conversation lessons and
 coaching questions live in `learning-material/sessions/`. Keep their presentation
-distinct. The PDF build uses `reading-index.json`, not the conversation index.
+distinct. Hiring-manager materials live in `hiring-manager/`, with separate
+`reading/` and `sessions/` subfolders and their own `study-progress.json`.
+The shared indexes point to those files. The PDF build uses `reading-index.json`, not the conversation index.
 It must work independently on an e-reader and in ChatGPT conversation mode with
 access to the remote GitHub repository. Do not ask the user to copy prompts,
 upload repository files, open an HTML reader, use an editor, or execute code.
@@ -14,8 +16,9 @@ When the user asks to start, continue, study, practise verbally, review a topic,
 or conduct a mock interview:
 
 1. Read `learning-material/TUTOR.md`.
-2. Read `learning-material/study-progress.json`.
-3. Read the relevant chapter in `learning-material/sessions/`, using
+2. Read `learning-material/study-progress.json` for technical study, or
+   `hiring-manager/study-progress.json` for manager preparation.
+3. Read the relevant chapter at its indexed path, using
    `learning-material/session-index.json` to locate it. The complete text and
    coach explanations are local; retrieve them yourself.
 4. Teach in conversation. Ask one question, wait for the user's answer, then

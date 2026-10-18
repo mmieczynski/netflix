@@ -58,5 +58,11 @@
     "chapter": 12,
     "title": "Complete interview case studies",
     "path": "reading/12-case-studies.md"
+  },
+  {
+    "chapter": 13,
+    "title": "Hiring manager interview preparation",
+    "path": "../hiring-manager/reading/13-hiring-manager.md",
+    "kind": "reference"
   }
 ]

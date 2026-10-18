@@ -1,18 +1,21 @@
 {
   "edition": "reading",
-  "chapters": 12,
+  "chapters": 13,
+  "technical_chapters": 12,
+  "reference_chapters": 1,
   "worked_examples": 25,
   "vector_figures": 29,
   "go_example_sections": 18,
   "go_code_blocks": 65,
   "state_tables": 43,
+  "reference_tables": 3,
   "problem_briefs": 42,
-  "conversation_questions_in_separate_sessions": 132,
+  "conversation_questions_in_separate_sessions": 144,
   "worked_program_designs": 12,
   "complete_case_studies": 2,
-  "source_words_approx": 19028,
-  "pdf_pages": 138,
-  "pdf_bytes": 338848,
+  "source_words_approx": 24283,
+  "pdf_pages": 162,
+  "pdf_bytes": 395776,
   "source_files": [
     "learning-material/BOOK-INTRO.md",
     "learning-material/reading/01-go.md",
@@ -27,6 +30,7 @@
     "learning-material/reading/10-recommend.md",
     "learning-material/reading/11-practical.md",
     "learning-material/reading/12-case-studies.md",
+    "learning-material/../hiring-manager/reading/13-hiring-manager.md",
     "learning-material/SOURCES.md"
   ]
 }
