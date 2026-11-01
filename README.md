@@ -71,6 +71,18 @@ manager conversation; ChatGPT should retrieve
 you one question at a time. No stories or completed practice have been inferred
 from the authoring of these materials.
 
+## System design and distributed debugging research
+
+The [system design preparation index](system-design/README.md) covers the two
+technical rounds for L5 Developer Platform, with the recruiter-provided HIPR
+and Change Systems context. Each design problem and detailed debugging scenario
+has its own file. The [Hello Interview guided practice priorities](system-design/hello-interview-priorities.md)
+rank relevant exercises, including those without written solutions, and explain
+which follow-ups to practise for this role.
+The original research was checked on 31 October 2026; the Hello Interview catalog
+was checked on 1 November 2026. These references are separate from the reading
+chapters, conversation sessions, and generated book editions.
+
 ## Training projects
 
 [Cache with a time limit](training/cache-with-time-limit/README.md) is an
@@ -88,6 +100,7 @@ It supports both optional coding practice and discussing an implementation aloud
 - `learning-material/TUTOR.md`: teaching and spoken-implementation guidance.
 - `learning-material/study-progress.json`: learner state, only updated from actual learning.
 - `hiring-manager/`: manager research, coaching session, story bank and preparation progress.
+- `system-design/`: interview research, separate design and debugging problems, and Hello Interview priorities.
 - `learning-material/book.txt`: complete plain-text edition.
 - `output/pdf/netflix-go-interview-book.pdf`: portable reading edition.
 - `learning-material/build_pdf.py`: regenerates the PDF and text edition.
