@@ -1,25 +1,25 @@
 # Remaining manager interview preparation
 
-You have four distinct examples drafted: schema-first, knowledge base, agent platform and the quota incident. Adoption and linting provide two additional angles from schema-first. The feedback account is partial. None has been independently rehearsed. A complete draft is not complete interview preparation.
+You have four distinct examples drafted: schema-first, knowledge base, agent platform and the quota incident. Adoption and linting provide two additional angles from schema-first. The new responsiveness-feedback account is drafted. None has been independently rehearsed. A complete draft is not complete interview preparation.
+
+Career introduction and Netflix motivation are prepared and in good shape by your report on 19 October 2026. They have not been reviewed here; no further discovery is needed unless requested.
 
 ## Highest priority
 
 | Gap | Why it matters | Enough to close it |
 | --- | --- | --- |
-| Career introduction and current scope | Explicit experience discussion | Current role, users, decisions owned, relevant career moves and two selected achievements |
-| Why Netflix and why this role now | Explicit recruiter topic | Your real reasons, link to developer tooling experience, what you want to contribute and learn |
 | Production stack and technical depth | Explicit recruiter topic | Actual languages/tools used in each main project, one consequential implementation detail, honest limits of experience |
-| Feedback story context | Current growth answer is abstract | Original disagreement topic, who gave feedback by role, and your initial reaction; ongoing change is already recorded |
-| Your view of the culture | Recruiter says it recurs | One principle linked to a real example, plus an honest adjustment or question |
-| Questions for the manager | Recruiter explicitly invites them | Select three or four questions below that would affect your decision |
+
+
+
 
 ## Behavioral coverage still missing
 
 These are preparation possibilities, not a requirement to fabricate an example for every topic.
 
-- [ ] **Supporting a decision you opposed:** a specific objection, who decided, and what you did afterward. The adoption story does not answer this.
-- [ ] **Giving difficult feedback:** what you said, how the person responded, and what followed. Receiving feedback is a separate story.
-- [ ] **Competing priorities:** what you deliberately postponed or stopped and why. Starting a linter during available time does not yet establish this.
+- [x] **Supporting a decision you opposed:** [SDK priority disagreement](stories/priority-disagreement.md). You preferred ingress, accepted SDK-first sequencing and took ownership of the refactor. Peers prioritized flagship-agent improvements; you now agree in hindsight.
+- [x] **Giving feedback:** [Priority-feedback example](stories/priority-feedback.md), with your assessment that stakeholder alignment resolved the issue. Recipient response is an optional follow-up.
+- [x] **Competing priorities:** [Knowledge-base handover](stories/knowledge-handover.md): platform dependency rationale, your documentation and help with initial PRs.
 - [ ] **Inclusion or developing a colleague:** a specific barrier you helped address or capability you helped someone build. Agent-team guidance may supply an example, but details are not collected.
 
 ## Targeted depth for existing stories
@@ -35,7 +35,11 @@ These are preparation possibilities, not a requirement to fabricate an example f
 
 Do not invent measurements. Concrete workflows, qualitative feedback and a working capability are valid outcomes when described accurately.
 
-## Questions to choose for the manager
+## Questions for the manager
+
+Your selected topics and wording are in [manager questions](manager-questions.md): first 90 days, layoff impact and hybrid working. Culture preferences are recorded: supported autonomy and continuous feedback.
+
+Other optional questions
 
 1. Which team and developer problems would this role focus on initially?
 2. What would strong L5 contribution look like in the first several months?

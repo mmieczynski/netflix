@@ -1,5 +1,7 @@
 # Hiring manager interview preparation
 
+For a single pre-interview reading pass, use the [15-minute refresher](interview-refresher.md). It brings together the stories, culture answer and manager questions.
+
 Start with the [story selector](story-bank.md) to choose an example for a question. Use its linked story cards for the opening, answer structure, spoken draft and claims to keep precise.
 
 - [Culture framing](culture-framing.md): connect actual behavior to the Netflix memo and avoid misleading framing.
@@ -8,4 +10,6 @@ Start with the [story selector](story-bank.md) to choose an example for a questi
 - [Coaching session](sessions/13-hiring-manager.md): conversation workflow.
 - [Progress](study-progress.json): saved preparation state. Technical progress remains separate.
 
-Four distinct examples have drafts, with two additional episodes from schema-first. The feedback story is partial; none has been independently rehearsed. Detailed historical notes are preserved in [the evidence archive](notes/story-evidence.md), away from the quick reference.
+Four distinct examples have drafts, with two additional episodes from schema-first. The selected feedback story is drafted; none has been independently rehearsed. Detailed historical notes are preserved in [the evidence archive](notes/story-evidence.md), away from the quick reference.
+
+- [Your questions for the manager](manager-questions.md): first 90 days, recent layoffs and hybrid working.

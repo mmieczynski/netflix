@@ -56,6 +56,8 @@ documentation from original exercises. These are not confirmed Netflix questions
 ## Hiring manager preparation
 
 All manager-interview materials live in [hiring-manager/](hiring-manager/).
+Start with the [15-minute pre-interview refresher](hiring-manager/interview-refresher.md)
+for stories, culture talking points and questions to ask.
 The [research guide](hiring-manager/reading/13-hiring-manager.md) is tailored
 to the recruiter brief and [Developer Platform position](https://explore.jobs.netflix.net/careers/job/790301977513),
 with sources checked on 13 October 2026. It covers 18 question families, strong

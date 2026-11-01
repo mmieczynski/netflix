@@ -31,6 +31,29 @@ These themes and their meaning come from the [culture memo](https://jobs.netflix
 
 ## Connections we cannot yet substantiate
 
-The memo describes seeking opposing views and supporting a decision after disagreement. We do not yet have a specific example showing either full sequence. Normal feedback discussions and adoption support should not be relabeled as those examples. We also lack an inclusion-specific event; helping another team alone does not establish that. [Culture memo](https://jobs.netflix.com/culture).
+The memo describes seeking opposing views and supporting a decision after disagreement. The [SDK priority disagreement](stories/priority-disagreement.md) now supplies a concrete example of supporting the selected work after arguing for another priority. Deliberately seeking opposing opinions remains less established. Normal feedback discussions and adoption support should not be relabeled as those examples. We also lack an inclusion-specific event; helping another team alone does not establish that. [Culture memo](https://jobs.netflix.com/culture).
 
-Your own reaction to the culture is still missing. Prepare a principle you connect with and a genuine adjustment or question. Do not choose an invented concern or claim agreement with everything.
+Your preferences are recorded below. You do not need to invent discomfort; use a genuine question about how support and decision context work on this team.
+
+## Talking points for your culture answer
+
+Choose two or three points you actually believe, then connect each to an example. These are suggested angles, not attributed personal preferences.
+
+- **Autonomy with clear context:** the linter shows self-directed work; the priority-feedback episode illustrates why you want clarity about goals and conflicting signals.
+- **Regular, useful feedback:** your proactive approach and conversation with a senior peer can support this; you report that stakeholder alignment resolved the issue. Pair it with your own received-feedback story to show both directions.
+- **Letting go of owned work:** the knowledge-base handover supplies a real priority change. Explain the dependency rationale and your documentation/PR support during handover.
+- **Learning through revision:** source-specific ingestion, fewer questions and SDK refactoring give concrete examples of revising an initial design.
+
+A useful question for the manager: “When senior stakeholders disagree about priorities, how does this team clarify who makes the final decision and communicate it?” The memo emphasizes a responsible decision owner rather than a committee; alignment discussions do not require unanimity. [Official memo](https://jobs.netflix.com/culture), checked 19 October 2026.
+
+No need to claim every principle feels easy. If true for you, the practical adjustment could be learning how much consultation a decision needs before acting. This is an optional reflection, not an established concern of yours.
+
+## Your stated culture preferences
+
+You connect with ownership and autonomy supported by teammates, who you report trust you to work that way. You also value continuous feedback because it complements autonomous work.
+
+Suggested wording based on that preference:
+
+> What resonates most with me is ownership and autonomy with support. I tend to take responsibility for work and drive it independently, and my teammates trust me to do that. I also value continuous feedback. To me, it complements autonomy: it helps me recognize when my judgment or approach needs adjusting while I remain responsible for the work.
+
+Use the linter for independent initiative, priority feedback for clear context, and the [responsiveness feedback story](stories/feedback.md) for an actual adjustment. These are your preferences and examples, not a claim that autonomy means working in isolation.

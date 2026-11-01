@@ -1,6 +1,8 @@
 # Choose a story for the manager interview
 
-Lead with **schema-first APIs** for your main project and **the knowledge base** for a second project. Use the **quota incident** for a mistake. Keep the **agent platform** for technical depth. The feedback story still needs context. Drafts exist; spoken delivery has not been rehearsed.
+Lead with **schema-first APIs** for your main project and **the knowledge base** for a second project. Use the **quota incident** for a mistake. Keep the **agent platform** for technical depth. The feedback story now covers responsiveness in an important discussion. Drafts exist; spoken delivery has not been rehearsed.
+
+For one continuous reading pass, use the [pre-interview refresher](interview-refresher.md).
 
 ## Match the question to the story
 
@@ -12,11 +14,11 @@ Lead with **schema-first APIs** for your main project and **the knowledge base**
 | Resistance or influence without authority | [Team adoption](stories/adoption.md) | Understand the workload, implement a starting point, completed handover | Draft ready |
 | Taking initiative without being asked | [API linter](stories/linter.md) | Identify an unassigned gap, build useful tooling, coordinate introduction | Draft ready |
 | A mistake or operational failure | [Quota incident](stories/quota-incident.md) | Own the assumption, explain personal response, distinguish fix from lesson | Draft ready |
-| Critical feedback or a growth area | [Pressing arguments](stories/feedback.md) | Unhelpful behavior and ongoing change | Original context missing |
-| A decision you opposed but supported | No confirmed example | Objection, decision owner, constructive execution | Gap |
-| Difficult feedback you gave | No confirmed example | Direct feedback, response and follow-through | Gap |
-| Competing priorities or company over team | No complete example | Actual competing options and sacrificed work | Gap |
-| Why Netflix or your career overview | [Preparation gaps](gaps.md) | Your reasons and career facts, supported by projects | Not drafted |
+| Critical feedback or a growth area | [Responsiveness feedback](stories/feedback.md) | Reflection, team urgency, selective attention | Draft ready |
+| A decision you opposed but supported | [SDK priority disagreement](stories/priority-disagreement.md) | Adoption rationale, accepted sequence, ownership of SDK refactor | Draft ready |
+| Feedback to a senior peer | [Conflicting priorities](stories/priority-feedback.md) | Team impact, concrete proposal, recipient response | Outcome reported; recipient reaction optional |
+| Competing priorities or company over team | [Knowledge-base handover](stories/knowledge-handover.md) | Why platform work took precedence; your role | Draft ready |
+| Why Netflix or your career overview | Your existing prepared answers | Your reasons and career facts | Prepared by your report; not reviewed here |
 
 Schema-first, team adoption and the linter are **one project with three answer angles**, not three independent projects. The other distinct projects are knowledge base, agent platform and quota endpoint.
 
@@ -28,7 +30,7 @@ Culture connections are interpretations of your facts, not an official hiring ru
 
 ## What remains
 
-The first priorities are **career and motivation**, **feedback context**, **technology depth**, and **questions for the manager**. Additional behavioral coverage and rehearsal also remain. The [prioritized gaps checklist](gaps.md) distinguishes those from optional detail; lack of metrics does not invalidate qualitative outcomes.
+Career and motivation are already prepared by your report. Culture preferences and [manager questions](manager-questions.md) are recorded. Remaining priorities are **technical depth** and **rehearsal**. Additional behavioral coverage and rehearsal also remain. The [prioritized gaps checklist](gaps.md) distinguishes those from optional detail; lack of metrics does not invalidate qualitative outcomes.
 
 ## Supporting material
 

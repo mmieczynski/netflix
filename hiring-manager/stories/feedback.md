@@ -1,36 +1,36 @@
-# Learning to stop pressing an argument
+# Responding promptly when a discussion blocks important work
 
-[Story selector](../story-bank.md) · [Culture framing](../culture-framing.md) · [Gaps](../gaps.md)
+[Story selector](../story-bank.md) · [Culture framing](../culture-framing.md)
 
-**Use for:** Critical feedback and growth. Context is still needed before treating it as a complete disagreement story.
-
-**Research questions:** Q10, Q18; Q08 only after context and resolution are established. **State:** Partial draft; context missing. No independent rehearsal recorded.
-
-## Opening
-
-> I learned to recognize when pressing my technical argument was stopping progress and to explore the other person’s concerns instead.
+**Use for:** Critical feedback, judgment about attention, and changed working habits. Recommended as the single active feedback-received story. First draft, not rehearsed. The earlier pressing-arguments example remains only in historical notes.
 
 ## Answer structure
 
-1. **Behavior:** Was convinced of the technical position and pushed too hard; did not persuade the other person.
-2. **Feedback:** Seek common ground and listen to the other person’s issues.
-3. **Change:** Reports applying this across later discussions: recognizes when to change approach, asks about concerns and seeks common ground.
-
-## Frame for the question
-
-Use “I was convinced my position was sound.” Admit the unhelpful behavior directly and describe the changed habit. Technical confidence does not establish that the other person was wrong.
-
-**Culture connection:** Candor and Curiosity are useful connections: receiving criticism and becoming more interested in another person’s concerns. Do not claim this demonstrates supporting a decision you opposed. See the [memo-based framing guide](../culture-framing.md) for the source and interpretation.
+1. A very senior engineer asked questions in a high-stakes channel discussion. You were working on something else and responded one to two hours later.
+2. You received feedback that you should have responded immediately.
+3. You accepted the feedback in the moment and gave yourself time to reflect because you did not trust your immediate judgment.
+4. You concluded that the relevant issue was unblocking the team on important work, rather than the questioner's seniority.
+5. You now mark genuinely important discussions for notifications so you can notice replies, while keeping that treatment selective.
 
 ## Spoken draft
 
-> I received feedback that I was pushing my arguments too hard in a disagreement. I was convinced my technical position was sound, and I kept pressing it without making progress. The feedback was to find common ground and understand the other person's concerns. Since then, I pay attention to when pushing my argument stops being useful, ask about the issues they are facing, and look for common ground. That has become part of how I handle discussions.
+> I received feedback after I took one or two hours to respond to questions in an important discussion because I was focused on other work. A very senior engineer had joined the thread, and the feedback was that I should have responded sooner.
+>
+> I accepted the feedback in the moment and took time to reflect rather than relying on my immediate reaction. I came to understand that the issue was keeping the team unblocked on important work, rather than responding quickly because someone was senior.
+>
+> Since then, I flag the most important discussions for notifications so I notice when they need attention. I keep that selective: I want to prioritize discussions where responsiveness matters without treating every message as an interruption.
+
+## Why this is the stronger current example
+
+The event, initial response, interpretation and actual habit change are all supplied. It shows the reasoning behind accepting feedback instead of just promising to improve. The old argument story lacked original context; no need to prepare both for this question.
 
 ## Keep the claims precise
 
-- The ongoing change is your reported practice, not merely an intention.
-- Do not invent a changed recommendation, successful resolution or later illustrative event.
+- One or two hours is not inherently unacceptable. The stakes and dependency on your reply explain why it mattered here; the specific blocked decision remains a useful follow-up detail.
+- The identity of the feedback giver is unspecified; do not assume it was the senior engineer.
+- Do not claim quantified delay, an outage, an emergency or proven later improvement.
+- Notification changes are reported practice. A brief acknowledgment when a full response must wait is optional coaching advice, not an action you have claimed.
 
 ## Follow-up preparation
 
-- What was the original disagreement about, and how did you initially respond to the feedback? A brief account is enough.
+If asked, explain what made the discussion important and what depended on your input. No need to invent being constantly available or immediately agreeing with all criticism.
